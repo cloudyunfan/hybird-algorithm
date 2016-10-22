@@ -8,9 +8,9 @@ clc
 
 %yf energy threshold,energy for transmission and CCA
 global E_th
-global N Tslot Data_rate TB Pbg Pgb CW CWmin CWmax UP UPnode Pkt_len E_TX E_CCA Tsim %isMAP lambdaE Emax Bmax isRAP
+global N Tslot Data_rate TB Pbg Pgb CW CWmin CWmax UP UPnode Pkt_len Emax Bmax lambdaE lambdaB E_TX E_CCA Tsim %isMAP lambdaE Emax Bmax isRAP
 %yf probability of arrive one unit energy in each slot
-global P1_x
+%global P1_x
 %------------802.15.6相关的全局参数---------
 UP = 0:7;  %8个优先级
 CWmin = [16,16,8,8,4,4,2,1];
@@ -25,9 +25,13 @@ Data_rate = 51.2; % transmission rate (kilo bits per second)
 E_th = 50;
 E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:1%*******************************%
 E_TX = E_th;       %发送数据包需要的能量
-P1_x = 0.6;
+%P1_x = 0.6;
+Emax = 20;%
+Bmax = 20;%
+lambdaB = 0.05;   %数据包每秒到达数
+lambdaE = 0.05;   %能量每秒到达数
 
-TB = 2000; %len_TDMA + len_RAP
+TB = 200; %len_TDMA + len_RAP
 act = 2;
 %yf omit the MAP
 M = 0;   %MAP中询问的时隙块数 M = 7;
@@ -85,14 +89,14 @@ for indE = 1:length(NL)%   多种优先级情况下
     %*******************************%
     %能量状态可以不考虑
     %*******************************%
-%     B_of_sp = zeros(Tsim,N);%记录溢出的能量
-%     B_sp = zeros(Tsim,N);
-%     EH_of_sp = zeros(Tsim,N);%记录溢出的能量
+    B_of_sp = zeros(Tsim,N);%记录溢出的能量
+    B_sp = zeros(Tsim,N);
+    EH_of_sp = zeros(Tsim,N);%记录溢出的能量
     EH_sp = zeros(Tsim,N);
 %     %历史状态记录
 % %     hist_Act = zeros(Tsim,N);
-%yf     hist_E = zeros(Tsim,N);
-%     hist_B = zeros(Tsim,N);
+    hist_E = zeros(Tsim,N);
+    hist_B = zeros(Tsim,N);
 %     actTime_sp = zeros(Tsim,1); %*******************************%
     
     Swait = waitbar(0,'仿真进度');   %设置进度条
@@ -124,17 +128,17 @@ for indE = 1:length(NL)%   多种优先级情况下
         end
         
         %**************************************************************%
-        %   不在超帧更新能量，改在每个超帧的时隙更新能量
+        %   在超帧更新能量
         %   yf
         %**************************************************************%
            %-------------更新普通节点的能量buffer------------------
-%         [E_overflow,B_overflow,E_flow,b_flow,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
-%         B_of_sp(j,:) = B_overflow;
-%         B_sp(j,:) = b_flow;  
-%         EH_of_sp(j,:) = E_overflow;
-%        EH_sp(j,:) = E_flow;  %yf 一会儿更改，将e_flow和E_buff放到slotCSMACA_unsat_new 长度从Tsim变成了rap_length
-% yf        hist_E(j,:) = E_buff;
-%         hist_B(j,:) = B_buff;
+        [E_overflow,B_overflow,E_flow,b_flow,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
+        B_of_sp(j,:) = B_overflow;
+        B_sp(j,:) = b_flow;  
+        EH_of_sp(j,:) = E_overflow;
+        EH_sp(j,:) = E_flow;  %yf 一会儿更改，将e_flow和E_buff放到slotCSMACA_unsat_new 长度从Tsim变成了rap_length
+        hist_E(j,:) = E_buff;
+        hist_B(j,:) = B_buff;
         
         %--------------进度显示-------------------------------
          str = ['仿真完成', num2str(j*100/Tsim), '%'];     
