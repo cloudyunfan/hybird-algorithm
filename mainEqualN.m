@@ -28,16 +28,16 @@ E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
 Emax = 20;%
 Bmax = 20;%
-lambdaB = 0.05;   %数据包每秒到达数
-lambdaE = 0.05;   %能量每秒到达数
+lambdaB = 0.05;   %数据包每秒到达数 /slot
+lambdaE = 0.05;   %能量包每秒到达数 /slot
 
 TB = 200; %len_TDMA + len_RAP
 %act = 2;
 %yf omit the MAP
-M = 0;   %MAP中询问的时隙块数 M = 7;
+M = 10;   %MAP中询问的时隙块数 M = 7;
 T_block = 10;  %MAP中每一个块的时隙数
-len_MAP = M*T_block;  %MAP的长度%*******************************%
-len_RAP = TB-len_MAP; %RAP阶段固定有100个时隙%*******************************%
+len_MAP = M*T_block;  %初始MAP的长度%*******************************%
+len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%*******************************%
 % UPH = 6;
 % UPN = 0; 
 %0,,6,7
