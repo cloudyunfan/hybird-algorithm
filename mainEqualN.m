@@ -18,9 +18,9 @@ CWmax = [64,32,32,16,16,8,8,4];
 
 %----------------------设置参数-----------------------------------------------------
 Tsim = 200; %NO. of superframes simulated
-Tslot = 376*10^(-6);  % slot length (ms)
-Pkt_len = 512; %packet length, unit is bit
-Data_rate = 51.2; % transmission rate (kilo bits per second)
+Tslot = 1;  % slot length (ms)
+Pkt_len = 607; %packet length, unit is bit
+Data_rate = 607.1; % transmission rate (kilo bits per second)
 % yf initialize energy
 E_th = 50;
 E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:1%*******************************%
@@ -32,7 +32,7 @@ lambdaB = 0.05;   %数据包每秒到达数
 lambdaE = 0.05;   %能量每秒到达数
 
 TB = 200; %len_TDMA + len_RAP
-act = 2;
+%act = 2;
 %yf omit the MAP
 M = 0;   %MAP中询问的时隙块数 M = 7;
 T_block = 10;  %MAP中每一个块的时隙数
@@ -42,7 +42,7 @@ len_RAP = TB-len_MAP; %RAP阶段固定有100个时隙%*******************************%
 % UPN = 0; 
 %0,,6,7
 UPclass = [6,4,2,0];
-NL = 4:4:32; %3:3:18
+NL = 8; %3:3:18 只有固定数目的节点
 %% ------------------------------------------------------------------------
 for indE = 1:length(NL)%   多种优先级情况下
 %     lambdaE = E_rate(indE);   
@@ -67,9 +67,9 @@ for indE = 1:length(NL)%   多种优先级情况下
     Pgb = zeros(1,N);   %如此为理想信道条件，信道恒定为GOOD不变
     
     %------------------初始化电池----------------
-    E_buff = (E_th)*ones(1,N); % 初始化各节点能量状态为0 yf改为够传的能量
+    E_buff = zeros(1,N); % 初始化各节点能量状态为0 
     
-     %----------------仿真变量-----------------------------
+    %----------------仿真变量-----------------------------
     RAP_CHN_Sta = ones(1,N); % initial channel assumed to be GOOD. temperal variable to record every INITIAL state in a superframe
     last_TX_time = ones(1,N); 
     CSMA_Sta_Pre = zeros(1,N);   % initial CSMA state assumed to be all 0 (0:initialization;1:backoff counter;2:sending packets)
@@ -190,5 +190,5 @@ for indE = 1:length(NL)%   多种优先级情况下
         
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
-disp('unsaturation VaringN simulation done!')
-save('VarN_MAC(UP0-2-4-6,NH1-1-8)(P1_x0.6)(N4-4-32)(E_th50)(E_cca5).mat');
+disp('unsaturation VaringLen simulation done!')
+save('VarN_MAC(UP0-2-4-6,N8)(P1_x0.6)(E_th50)(E_cca5).mat');

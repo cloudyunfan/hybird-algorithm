@@ -130,7 +130,7 @@ while ( t<=rap_length )
 %          else
         if ( CSMA_sta(n)==1 )
           if (Backoff_time(n) == 1) %yf
- %            if( E_buff(n)>=(E_CCA+E_TX) ) %&&isRAP(n)==1
+            if( E_buff(n)>=(E_CCA+E_TX) ) %&&isRAP(n)==1
               %进行信道状态检查CCA
               ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
               E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -149,11 +149,11 @@ while ( t<=rap_length )
                    end
               end   
               isCCA(n) = 1;
- %            end
+            end
              
           else %yf
               
-%              if( E_buff(n)>=(E_CCA) )%&&isRAP(n)==1
+             if( E_buff(n)>=(E_CCA) )%&&isRAP(n)==1
                %进行信道状态检查CCA
                ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
                E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -172,13 +172,13 @@ while ( t<=rap_length )
                     end
                end   
                isCCA(n) = 1;
- %             end
+             end
               
           end %yf end backoff
         else
             if( (CSMA_sta(n)==0)&&(def_time_pre(n)~= -1)) 
                 if (def_time_pre(n) == 1) %yf
-%                    if( E_buff(n)>=(E_CCA+E_TX) ) %&&isRAP(n)==1
+                   if( E_buff(n)>=(E_CCA+E_TX) ) %&&isRAP(n)==1
               %进行信道状态检查CCA
                       ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
                       E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -197,11 +197,11 @@ while ( t<=rap_length )
                            end
                       end   
                      isCCA(n) = 1;
- %                   end
+                   end
              
              else %yf
 
-%                  if( E_buff(n)>=(E_CCA) )%&&isRAP(n)==1
+                 if( E_buff(n)>=(E_CCA) )%&&isRAP(n)==1
                        %进行信道状态检查CCA
                        ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
                        E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -220,7 +220,7 @@ while ( t<=rap_length )
                             end
                        end   
                        isCCA(n) = 1;
-%                   end
+                  end
 
                 end %yf end def
             end
