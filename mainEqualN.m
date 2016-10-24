@@ -66,11 +66,13 @@ for indE = 1:length(NL)%   多种优先级情况下
     Pbg = zeros(1,N);
     Pgb = zeros(1,N);   %如此为理想信道条件，信道恒定为GOOD不变
     
-    %------------------初始化电池----------------
+    %------------------初始化电池和缓存数据区----------------
     E_buff = zeros(1,N); % 初始化各节点能量状态为0 
+    B_buff = zeros(1,N);
     
     %----------------仿真变量-----------------------------
     RAP_CHN_Sta = ones(1,N); % initial channel assumed to be GOOD. temperal variable to record every INITIAL state in a superframe
+    TDMA_CHN_Sta = ones(1,N);    % initial channel assumed to be GOOD
     last_TX_time = ones(1,N); 
     CSMA_Sta_Pre = zeros(1,N);   % initial CSMA state assumed to be all 0 (0:initialization;1:backoff counter;2:sending packets)
     Def_Time_Pre = (-1)*ones(1,N); % initial deferred time -1
@@ -81,9 +83,12 @@ for indE = 1:length(NL)%   多种优先级情况下
 
     %--------------一需要统计的结果-------------------------------
     PL_RAP_sp = zeros(Tsim,N);  %丢包数
+    PL_MAP_sp = zeros(Tsim,N);
     Colli_RAP_sp = zeros(Tsim,N);
-    PS_RAP_sp = zeros(Tsim,N);   %成功传输的包数           
+    PS_RAP_sp = zeros(Tsim,N);   %成功传输的包数
+    PS_MAP_sp = zeros(Tsim,N);
     ELE_RAP_sp = zeros(Tsim,N);%记录能耗
+    ELE_MAP_sp = zeros(Tsim,N);
     ELE_RAP_tx = zeros(Tsim,N);%记录传输能耗
     Count_sp = zeros(Tsim,N);  %传输数
     %*******************************%
@@ -103,11 +108,37 @@ for indE = 1:length(NL)%   多种优先级情况下
     last_TX_time_RAP = ones(1,N);
     
     for j = 1: Tsim
+         %--------------MAP 阶段，使用TDMA方式分配时隙--------------;               
+         start = (j-1)*TB + 1; 
+         TDMA_sift = 0;   %偏移量  
+         indMAP = find(ones(1,N)==1); %所有节点都参与MAP
+         indPoll = getPollNode(indMAP,M);  %确定将被poll的节点
+         %hist_MAP(j,1:length(indPoll))=indPoll;
+         for poll =1:length(indPoll)   %遍历所有高优先级节点的决策行为     
+             ind_node_poll = indPoll(poll); %取下标
+            %----------scheduled slots---------------
+            CHNafter_leng = 0;
+            CHNbefore_leng = start + TDMA_sift - last_TX_time(ind_node_poll);
+            last_TX_time_MAP = last_TX_time(n) - CHNbefore_leng - TDMA_sift;
+            [PL_td,PS_td,lastout(ind_node_poll),TDMA_CHN_Sta(ind_node_poll),Succ_TX_time_td,ELE_MAP,E_buff(ind_node_poll),B_buff(ind_node_poll)] = pktsendTDMA_unsat( CHNbefore_leng,CHNafter_leng,TDMA_CHN_Sta((ind_node_poll)),T_block,Pbg((ind_node_poll)),Pgb((ind_node_poll)),E_buff((ind_node_poll)),B_buff((ind_node_poll)));
+            if(~isempty(Succ_TX_time_td))
+                %recover the real index                        
+                ind_TX_MAP = Succ_TX_time_td + start + TDMA_sift;
+                last_TX_time(ind_node_poll) = ind_TX_MAP(end);
+                Succ_TX_time(ind_TX_MAP,ind_node_poll) = 1;
+            end
+           %---------------------更新统计变量------------------------
+            TDMA_sift = TDMA_sift + T_block; %根据每个节点分配到的时隙数增加偏移量                    
+            ELE_MAP_sp(j,ind_node_poll) = ELE_MAP_sp(j,ind_node_poll) + ELE_MAP;  %消耗的能量增加 
+            PL_MAP_sp(j,ind_node_poll) = PL_td;
+            PS_MAP_sp(j,ind_node_poll) = PS_td;                                              
+         end 
+         
         %--------------------RAP阶段使用时隙CSMA/CA时隙分配方式,所有节点参与这个阶段------
-        last_TX_time_RAP_ini = ones(1,N);
+        last_TX_time_RAP = last_TX_time - (j-1)*TB - len_MAP;
 %         tic
         %yf Act(action),ignore the act ,always RAP %TDMA_CHN_Sta,
-        [ReTX_time_pre,Def_Time_Pre,CSMA_Sta_Pre,PL_RAP,PS_RAP,Colli_RAP,ELE_RAP,Succ_TX_time_RAP,E_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(len_RAP,CSMA_Sta_Pre,Def_Time_Pre,RAP_CHN_Sta,ReTX_time_pre,CW,last_TX_time_RAP_ini,E_buff);%ELE_RAP,（倒数第四）,E_buff,E_flow（最后两个）等一下改 CW可以全局传过去
+        [ReTX_time_pre,Def_Time_Pre,CSMA_Sta_Pre,PL_RAP,PS_RAP,Colli_RAP,ELE_RAP,Succ_TX_time_RAP,E_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(len_RAP,CSMA_Sta_Pre,Def_Time_Pre,RAP_CHN_Sta,ReTX_time_pre,CW,last_TX_time_RAP,E_buff);%ELE_RAP,（倒数第四）,E_buff,E_flow（最后两个）等一下改 CW可以全局传过去
 %         toc
         
         PL_RAP_sp(j,:) = PL_RAP;
