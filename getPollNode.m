@@ -1,6 +1,6 @@
 function indMAP = getPollNode(IndNode_MAP,M)
 % Input:
-%     IndNode_MAP:index of nodes which can us MAP
+%     IndNode_MAP:index of nodes which can use MAP
 %     M: max poll times in MAP
 % Output:
 %     indMAP: index of nodes which will be poll in MAP
