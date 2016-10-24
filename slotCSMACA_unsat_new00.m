@@ -18,7 +18,7 @@ function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_b
 %     4.tdma_CHN_sta:last Channel state(0:
 %     idle,1:busy)%*******************************%
 %     5.pl_t: number of lost packets
-%     6.ps_t:number of packets sent succesiffuly 
+%     6.ps_t:number of packets sent successfully 
 %     7.PL_colli: collision times
 %     8.ELE_ex: total energy exhost
 %     9.TX_time: record time when node send packet successfully
