@@ -308,17 +308,17 @@ end
 % each node
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % tic
-%  for n=1:N
-%      for g=1:(floor (rap_length) - floor (last_TX_time(n)))
-%          if last_CHN_sta(n) == 1
-%              last_CHN_sta(n) = randsrc(1,1,[0 1;Pgb(n) 1-Pgb(n)]); %%%%%% channel model
-%          else
-%              last_CHN_sta(n) = randsrc(1,1,[0 1;1-Pbg(n) Pbg(n)]); %%%%%% using Markov chain
-%          end
-%      end
-%       %yf
-% %      last_CHN_sta(n) = 1;
-%  end
+ for n=1:N
+     for g=1:(floor (rap_length) - floor (last_TX_time(n)))
+         if last_CHN_sta(n) == 1
+             last_CHN_sta(n) = randsrc(1,1,[0 1;Pgb(n) 1-Pgb(n)]); %%%%%% channel model
+         else
+             last_CHN_sta(n) = randsrc(1,1,[0 1;1-Pbg(n) Pbg(n)]); %%%%%% using Markov chain
+         end
+     end
+      %yf
+%      last_CHN_sta(n) = 1;
+ end
 % t5 = toc
     
 end % function end
