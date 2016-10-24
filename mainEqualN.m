@@ -111,7 +111,7 @@ for indE = 1:length(NL)%   多种优先级情况下
          %--------------MAP 阶段，使用TDMA方式分配时隙--------------;               
          start = (j-1)*TB + 1; 
          TDMA_sift = 0;   %偏移量  
-         indMAP = find(ones(1,N)==1); %所有节点都参与MAP
+         indMAP = find(ones(1,N)==1); %所有节点都参与MAP,所有节点的index
          indPoll = getPollNode(indMAP,M);  %确定将被poll的节点
          %hist_MAP(j,1:length(indPoll))=indPoll;
          for poll =1:length(indPoll)   %遍历所有高优先级节点的决策行为     
@@ -162,7 +162,7 @@ for indE = 1:length(NL)%   多种优先级情况下
         %   在超帧更新能量
         %   yf
         %**************************************************************%
-           %-------------更新普通节点的能量buffer------------------
+        %-------------更新普通节点的能量buffer------------------
         [E_overflow,B_overflow,E_flow,b_flow,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
         B_of_sp(j,:) = B_overflow;
         B_sp(j,:) = b_flow;  
