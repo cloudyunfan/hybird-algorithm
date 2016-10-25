@@ -18,7 +18,7 @@ global Emax Bmax lambdaE lambdaB
 Num_node = length(E_nodebuf);
 %% energy and data flow
 e_flow = poissrnd(lambdaE*timeIntv,1,Num_node);         %一个超帧中到达的能量数服从泊松分布
-b_flow = poissrnd(lambdaB*timeIntv,1,Num_node);         %一个超帧中到达的数据包数服从泊松分布            
+b_flow = lambdaB*timeIntv;         %一个超帧中到达的数据包数是均匀到达的           
 
 %% comput overflow
 for n=1:Num_node

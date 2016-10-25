@@ -17,7 +17,7 @@ CWmin = [16,16,8,8,4,4,2,1];
 CWmax = [64,32,32,16,16,8,8,4];
 
 %----------------------设置参数-----------------------------------------------------
-Tsim = 200; %NO. of superframes simulated
+Tsim = 2000; %NO. of superframes simulated
 Tslot = 1;  % slot length (ms)
 Pkt_len = 607; %packet length, unit is bit
 Data_rate = 607.1; % transmission rate (kilo bits per second)
@@ -28,8 +28,15 @@ E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
 Emax = 20;%
 Bmax = 20;%
-lambdaB = 0.05;   %数据包每秒到达数 /slot
+isNormal = 1; %数据到达是normal状态
+Pna = 0.4;
+Pan = 0.3;
+lambdaBNormal = 0.05;   %数据包每秒到达数 /slot normal状态
+lambdaBAbnormal = 0.1;   %数据包每秒到达数 /slot normal状态
+lambdaB = lambdaBNormal;
 lambdaE = 0.05;   %能量包每秒到达数 /slot
+
+
 
 TB = 200; %len_TDMA + len_RAP
 %act = 2;
@@ -61,7 +68,8 @@ for indE = 1:length(NL)%   多种优先级情况下
     for n=1:N
         CW(n) = CWmin(find(UP==UPnode(n)));  %初始化CW为节点对应优先级的CWmin
     end
-
+    %---------用马尔科夫链模拟数据到达率转移：normal and abnormal----------
+    
     %-----信道模型使用马尔科夫链对信道状态建模，设置信道状态转移概率---------
     Pbg = zeros(1,N);
     Pgb = zeros(1,N);   %如此为理想信道条件，信道恒定为GOOD不变
@@ -108,6 +116,12 @@ for indE = 1:length(NL)%   多种优先级情况下
     last_TX_time_RAP = ones(1,N);
     
     for j = 1: Tsim
+         %--------------------改变数据采样状态-----------------
+         if isNormal == 1
+            isNormal = randsrc(1,1,[0 1;Pna 1-Pna]);
+         else
+            isNormal = randsrc(1,1,[0 1;1-Pan Pan]);
+         end
          %--------------MAP 阶段，使用TDMA方式分配时隙--------------;               
          start = (j-1)*TB + 1; 
          TDMA_sift = 0;   %偏移量  
@@ -171,6 +185,12 @@ for indE = 1:length(NL)%   多种优先级情况下
         hist_E(j,:) = E_buff;
         hist_B(j,:) = B_buff;
         
+        %--------------更新数据采样率：根据之前markov链的结果-------------------------
+        if isNormal == 1
+            lambdaB = lambdaBNormal;
+        else
+            lambdaB = lambdaBAbnormal;
+        end
         %--------------进度显示-------------------------------
          str = ['仿真完成', num2str(j*100/Tsim), '%'];     
          waitbar(j/Tsim,Swait,str);
