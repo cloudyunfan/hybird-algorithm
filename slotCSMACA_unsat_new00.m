@@ -1,4 +1,4 @@
-function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(rap_length,CSMA_sta,def_time_pre,last_CHN_sta,ReTX_times_pre,CW,last_TX_time,E_buff) %act,,B_buff
+function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(rap_length,CSMA_sta,def_time_pre,last_CHN_sta,ReTX_times_pre,CW,last_TX_time,E_buff,B_buff) %act,,B_buff
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ELE_ex(倒数第四),E_buff,E_flow（最后两个）
 %%% CSMA/CA transmission under unsaturation condition
 % Input:
@@ -10,7 +10,7 @@ function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_b
 %     7.CW: contention window of every node
 %     8.last_TX_time： last time sending packet successfully
 %     10:E_buff:能量缓存区
-%     11:e_flow:能量流
+%     11:B_buff:数据缓存区
 % Output:
 %     1.ReTX_time: remaining retransmission times after this superframe
 %     2.backoff_after: remaining backoff counter after this superframe
@@ -85,7 +85,7 @@ while ( t<=rap_length )
             n1 = ind_TX(n);
             if( ReTX_time(n1)>M )           %达到最大重传次数，丢弃当前包
                 pl_t(n1) = pl_t(n1) + 1;    %丢包次数加1
-%                 B_buff(n1) = B_buff(n1) - 1;  %缓存区数据包数减一
+                B_buff(n1) = B_buff(n1) - 1;  %缓存区数据包数减一
                 ReTX_time(n1) = 0;           %重传次数归0
                 CW(n1) = CWmin(find(UP==UPnode(n1)));  %修改竞争窗口为节点对应优先级的CWmin 
             else
@@ -117,7 +117,8 @@ while ( t<=rap_length )
             E_buff(ind_TX) = E_buff(ind_TX) - E_TX; %消耗掉能量           
             %yf
             pl_t(ind_TX) = pl_t(ind_TX) + PL_cap;  %在pktsend阶段因为信道条件原因丢包了也算进来
-            ps_t(ind_TX) = ps_t(ind_TX) + PS_cap; 
+            ps_t(ind_TX) = ps_t(ind_TX) + PS_cap;
+            B_buff(ind_TX) = B_buff(ind_TX) - PS_cap;  %缓存区数据包数减一
         end
     end
     TX_ready(ind_TX) = 0;   %重置标志位    
@@ -130,7 +131,7 @@ while ( t<=rap_length )
 %          else
         if ( CSMA_sta(n)==1 )
           if (Backoff_time(n) == 1) %yf
-            if( E_buff(n)>=(E_CCA+E_TX) ) %&&isRAP(n)==1
+            if( E_buff(n)>=(E_CCA+E_TX) && B_buff(n)>=1) %&&isRAP(n)==1
               %进行信道状态检查CCA
               ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
               E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -153,7 +154,7 @@ while ( t<=rap_length )
              
           else %yf
               
-             if( E_buff(n)>=(E_CCA) )%&&isRAP(n)==1
+             if( E_buff(n)>=(E_CCA + E_TX) && B_buff(n)>=1 )%&&isRAP(n)==1
                %进行信道状态检查CCA
                ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
                E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -178,7 +179,7 @@ while ( t<=rap_length )
         else
             if( (CSMA_sta(n)==0)&&(def_time_pre(n)~= -1)) 
                 if (def_time_pre(n) == 1) %yf
-                   if( E_buff(n)>=(E_CCA+E_TX) ) %&&isRAP(n)==1
+                   if( E_buff(n)>=(E_CCA+E_TX) && B_buff(n)>=1 ) %&&isRAP(n)==1
               %进行信道状态检查CCA
                       ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
                       E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
@@ -201,7 +202,7 @@ while ( t<=rap_length )
              
              else %yf
 
-                 if( E_buff(n)>=(E_CCA) )%&&isRAP(n)==1
+                 if( E_buff(n)>=(E_CCA + E_TX) && B_buff(n)>=1 )%&&isRAP(n)==1
                        %进行信道状态检查CCA
                        ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
                        E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
