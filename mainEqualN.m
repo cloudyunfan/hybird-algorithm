@@ -8,7 +8,7 @@ clc
 
 %yf energy threshold,energy for transmission and CCA
 global E_th
-global N Tslot Data_rate TB Pbg Pgb CW CWmin CWmax UP UPnode Pkt_len Emax Bmax lambdaE lambdaB E_TX E_CCA Tsim %isMAP lambdaE Emax Bmax isRAP
+global N Tslot Data_rate TB Pbg Pgb CW CWmin CWmax UP UPnode Pkt_len Emax Bmax lambdaE lambdaB E_TX E_CCA Tsim stateLast isGood %isMAP lambdaE Emax Bmax isRAP
 %yf probability of arrive one unit energy in each slot
 %global P1_x
 %------------802.15.6相关的全局参数---------
@@ -28,15 +28,27 @@ E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
 Emax = 20;%
 Bmax = 20;%
+%-----------数据到达率转移概率-------------
 isNormal = 1; %数据到达是normal状态
 Pna = 0.4;
 Pan = 0.3;
 lambdaBNormal = 0.05;   %数据包每秒到达数 /slot normal状态
 lambdaBAbnormal = 0.1;   %数据包每秒到达数 /slot normal状态
 lambdaB = lambdaBNormal;
+%--------------动作转移概率：sitting and walking----------------
+isChange = 0; %判断动作是否改变
+isWalk = 1;
+Pws = 0.2;
+Psw = 0.2;
+% walking and sitting state (slots)
+badStateLastWalk = [12 12 32 32 32 32 25 25];
+goodStateLastWalk = [52 52 72 72 72 72 77 77];
+badStateLastSit = [28 28 84 84 84 84 65 65];
+goodStateLastSit = [124 124 57 57 57 57 151 151];
+badStateLast = badStateLastWalk;
+goodStateLast = goodStateLastWalk;
+
 lambdaE = 0.05;   %能量包每秒到达数 /slot
-
-
 
 TB = 200; %len_TDMA + len_RAP
 %act = 2;
@@ -68,11 +80,12 @@ for indE = 1:length(NL)%   多种优先级情况下
     for n=1:N
         CW(n) = CWmin(find(UP==UPnode(n)));  %初始化CW为节点对应优先级的CWmin
     end
-    %---------用马尔科夫链模拟数据到达率转移：normal and abnormal----------
     
-    %-----信道模型使用马尔科夫链对信道状态建模，设置信道状态转移概率---------
-    Pbg = zeros(1,N);
-    Pgb = zeros(1,N);   %如此为理想信道条件，信道恒定为GOOD不变
+    %-----信道模型使用半马尔科夫链对信道状态建模，设置信道状态转移概率---------
+    Pbg = ones(1,N);
+    Pgb = ones(1,N);   %设置每个节点的转移概率
+    stateLast = zeros(1,N);   %设置每个节点的信道持续时间
+    isGood = randint(1,N);   %随机设置每个节点的初始信道状态
     
     %------------------初始化电池和缓存数据区----------------
     E_buff = zeros(1,N); % 初始化各节点能量状态为0 
@@ -115,8 +128,25 @@ for indE = 1:length(NL)%   多种优先级情况下
     Swait = waitbar(0,'仿真进度');   %设置进度条
     last_TX_time_RAP = ones(1,N);
     
+    %*******************************%
+    %
+    %       以超帧为单位迭代
+    %
+    %*******************************%
     for j = 1: Tsim
-         %--------------------改变数据采样状态-----------------
+         %----用马尔科夫链模拟动作转移：sitting and walking----
+         if isWalk == 1
+            isWalk = randsrc(1,1,[0 1;Pws 1-Pws]);
+            if isWalk == 0
+                isChange = 1; %判断动作改变了
+            end
+         else
+            isWalk = randsrc(1,1,[0 1;1-Psw Psw]);
+            if isWalk == 1
+                isChange = 1; %判断动作改变了
+            end
+         end         
+         %----用马尔科夫链模拟数据到达率转移：normal and abnormal----
          if isNormal == 1
             isNormal = randsrc(1,1,[0 1;Pna 1-Pna]);
          else
@@ -133,8 +163,9 @@ for indE = 1:length(NL)%   多种优先级情况下
             %----------scheduled slots---------------
             CHNafter_leng = 0;
             CHNbefore_leng = start + TDMA_sift - last_TX_time(ind_node_poll);
-            last_TX_time_MAP = last_TX_time(n) - CHNbefore_leng - TDMA_sift;
-            [PL_td,PS_td,lastout(ind_node_poll),TDMA_CHN_Sta(ind_node_poll),Succ_TX_time_td,ELE_MAP,E_buff(ind_node_poll),B_buff(ind_node_poll)] = pktsendTDMA_unsat( CHNbefore_leng,CHNafter_leng,TDMA_CHN_Sta((ind_node_poll)),T_block,Pbg((ind_node_poll)),Pgb((ind_node_poll)),E_buff((ind_node_poll)),B_buff((ind_node_poll)));
+            %some errors
+            %last_TX_time_MAP = last_TX_time(ind_node_poll) - CHNbefore_leng - TDMA_sift;
+            [PL_td,PS_td,lastout(ind_node_poll),TDMA_CHN_Sta(ind_node_poll),Succ_TX_time_td,ELE_MAP,E_buff(ind_node_poll),B_buff(ind_node_poll),stateLast(ind_node_poll),isGood(ind_node_poll)] = pktsendTDMA_unsat( CHNbefore_leng,CHNafter_leng,TDMA_CHN_Sta((ind_node_poll)),T_block,Pbg((ind_node_poll)),Pgb((ind_node_poll)),stateLast(ind_node_poll),isGood(ind_node_poll),badStateLast(ind_node_poll),goodStateLast(ind_node_poll),E_buff((ind_node_poll)),B_buff((ind_node_poll)));
             if(~isempty(Succ_TX_time_td))
                 %recover the real index                        
                 ind_TX_MAP = Succ_TX_time_td + start + TDMA_sift;
@@ -190,6 +221,21 @@ for indE = 1:length(NL)%   多种优先级情况下
             lambdaB = lambdaBNormal;
         else
             lambdaB = lambdaBAbnormal;
+        end
+        %------------------更新新的动作的好坏信道持续时间-----------------------------
+        if (isChange == 1 && isWalk == 1)
+            badStateLast = badStateLastWalk;
+            goodStateLast = goodStateLastWalk;
+            isChange = 0;
+            %动作发生改变需不需要重置stateLast
+            stateLast = zeros(1,N);   %设置每个节点的信道持续时间
+        end
+        if (isChange == 1 && isWalk == 0)
+            badStateLast = badStateLastSit;
+            goodStateLast = goodStateLastSit;
+            isChange = 0;
+            %动作发生改变需不需要重置stateLast
+            stateLast = zeros(1,N);   %设置每个节点的信道持续时间
         end
         %--------------进度显示-------------------------------
          str = ['仿真完成', num2str(j*100/Tsim), '%'];     

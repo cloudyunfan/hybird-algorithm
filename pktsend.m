@@ -23,26 +23,61 @@ CHN_sta = CHN_sta_ini; % CHN_sta is a temperal variable updating every loop
 % channel state is updating
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % the channel state before current transmission，使用马尔科夫链来计算当前信道状态
-for c = 1:CHNbefore_leng 
-        if CHN_sta == 1
-            CHN_sta = randsrc(1,1,[0 1;Pd 1-Pd]); %%%%%% channel model
-        else
-            CHN_sta = randsrc(1,1,[0 1;1-Pu Pu]); %%%%%% using Markov chain
+% for c = 1:CHNbefore_leng 
+%         if CHN_sta == 1
+%             CHN_sta = randsrc(1,1,[0 1;Pd 1-Pd]); %%%%%% channel model
+%         else
+%             CHN_sta = randsrc(1,1,[0 1;1-Pu Pu]); %%%%%% using Markov chain
+%         end
+% end
+for c = 1:CHNbefore_leng
+    statelast = statelast + 1;
+    if isgood == 1
+        if statelast >= goodstatelast
+            isgood = 0;
+            statelast = 0;
         end
+    else
+        if statelast >= badstatelast
+            isgood = 1;
+            statelast = 0;
+        end
+    end
 end
 % transmitting  slotNO packets
+% for d = 1:slotNO  % each node i transmit slotNO slots
+%         if CHN_sta == 1
+%             CHN_sta = randsrc(1,1,[0 1;Pd 1-Pd]); %%%%%% channel model
+%         else
+%             CHN_sta = randsrc(1,1,[0 1;1-Pu Pu]); %%%%%% using Markov chain
+%         end
+%         if CHN_sta == 0
+%             pl = pl+1; %%%%% calculate the NO. of lossed packets
+%         else
+%             ps = ps+1; %%%%% calculate the NO. of successful packets
+%         end
+% end
 for d = 1:slotNO  % each node i transmit slotNO slots
-        if CHN_sta == 1
-            CHN_sta = randsrc(1,1,[0 1;Pd 1-Pd]); %%%%%% channel model
-        else
-            CHN_sta = randsrc(1,1,[0 1;1-Pu Pu]); %%%%%% using Markov chain
+    statelast = statelast + 1;
+    if isgood == 1
+        if statelast >= goodstatelast
+            isgood = 0;
+            statelast = 0;
         end
-        if CHN_sta == 0
-            pl = pl+1; %%%%% calculate the NO. of lossed packets
-        else
-            ps = ps+1; %%%%% calculate the NO. of successful packets
+    else
+        if statelast >= badstatelast
+            isgood = 1;
+            statelast = 0;
         end
+    end    
+    if ( isgood==0 )
+        pl = pl+1; %%%%% calculate the NO. of lossed packets
+    else
+        ps = ps+1; %%%%% calculate the NO. of successful packets
+    end
 end
+
+% not use
 % outcome of last slot of current node,记录发送包时的信道状态（0：不好；1：好）
 outcome = CHN_sta;
 % update the channel state after transmission

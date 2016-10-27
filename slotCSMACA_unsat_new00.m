@@ -29,7 +29,7 @@ function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_b
 % parameters initialization 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-global Data_rate Pkt_len Tslot Pbg Pgb CWmin CWmax UP UPnode E_TX E_CCA %isMAP isRAP 
+global Data_rate Pkt_len Tslot Pbg Pgb CWmin CWmax UP UPnode E_TX E_CCA stateLast isGood%isMAP isRAP 
 
 %-----------参数---------------------------------------------------------
 
@@ -102,7 +102,7 @@ while ( t<=rap_length )
             CHNb_leng = t + 1 - last_TX_time(ind_TX); %计算从上一次发送数据包到现在的时间
             % TX one packet, the channel state when the pkt is finished is
             % recorded and used  3.last slot state of current node 4.the last state after the superframe.
-            [ PL_cap,PS_cap,last_CHN_sta(ind_TX), no_use(ind_TX)] = pktsend( CHNb_leng,0,last_CHN_sta(ind_TX),1,Pbg(ind_TX),Pgb(ind_TX)); 
+            [ PL_cap,PS_cap,last_CHN_sta(ind_TX), no_use(ind_TX),stateLast(ind_TX),isGood(ind_TX)] = pktsend( CHNb_leng,0,last_CHN_sta(ind_TX),1,Pbg(ind_TX),Pgb(ind_TX),stateLast(ind_TX),isGood(ind_TX)); 
 %             disp(['node ',num2str(ind_TX),' send Pkt ',num2str(PS_cap),' successfully!']);
            
             %%--------------------修改仿真变量------------------------
@@ -227,6 +227,7 @@ while ( t<=rap_length )
             end
         end
     end %end for
+    
     %检查节点状态
     for n=1:N  
         if( (rap_length-t-T_pkt)>=0 ) % &&isRAP(n)==1  &&E_buff(n)>=(E_TX)
