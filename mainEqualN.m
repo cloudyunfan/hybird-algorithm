@@ -28,12 +28,14 @@ E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
 Emax = 20;%
 Bmax = 20;%
+UPclass = [6,4,2,0];
+NL = 8; %3:3:18 只有固定数目的节点
 %-----------数据到达率转移概率-------------
-isNormal = 1; %数据到达是normal状态
-Pna = 0.4;
-Pan = 0.3;
-lambdaBNormal = 0.05;   %数据包每秒到达数 /slot normal状态
-lambdaBAbnormal = 0.1;   %数据包每秒到达数 /slot normal状态
+isNormal = ones(1,NL); %数据到达是normal状态
+Pna = [0.4 0.4 0.3 0.3 0.2 0.2 0.1 0.1];
+Pan = [0.2 0.2 0.3 0.3 0.4 0.4 0.1 0.1];
+lambdaBNormal = [0.05 0.05 0.03 0.03 0.08 0.08 0.06 0.06];   %数据包每秒到达数 /slot normal状态
+lambdaBAbnormal = [0.1 0.1 0.2 0.2 0.1 0.1 0.2 0.2];   %数据包每秒到达数 /slot normal状态
 lambdaB = lambdaBNormal;
 %--------------动作转移概率：sitting and walking----------------
 isChange = 0; %判断动作是否改变
@@ -48,7 +50,7 @@ goodStateLastSit = [124 124 57 57 57 57 151 151];
 badStateLast = badStateLastWalk;
 goodStateLast = goodStateLastWalk;
 
-lambdaE = 0.05;   %能量包每秒到达数 /slot
+lambdaE = 0.05*ones(1,NL);   %能量包每秒到达数 /slot
 
 TB = 200; %len_TDMA + len_RAP
 %act = 2;
@@ -60,8 +62,7 @@ len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%******************************
 % UPH = 6;
 % UPN = 0; 
 %0,,6,7
-UPclass = [6,4,2,0];
-NL = 8; %3:3:18 只有固定数目的节点
+
 %% ------------------------------------------------------------------------
 for indE = 1:length(NL)%   多种优先级情况下
 %     lambdaE = E_rate(indE);   
@@ -128,11 +129,11 @@ for indE = 1:length(NL)%   多种优先级情况下
     Swait = waitbar(0,'仿真进度');   %设置进度条
     last_TX_time_RAP = ones(1,N);
     
-    %*******************************%
+    %********************************************************%
     %
-    %       以超帧为单位迭代
+    %                    以超帧为单位迭代
     %
-    %*******************************%
+    %********************************************************%
     for j = 1: Tsim
          %----用马尔科夫链模拟动作转移：sitting and walking----
          if isWalk == 1
@@ -147,10 +148,12 @@ for indE = 1:length(NL)%   多种优先级情况下
             end
          end         
          %----用马尔科夫链模拟数据到达率转移：normal and abnormal----
-         if isNormal == 1
-            isNormal = randsrc(1,1,[0 1;Pna 1-Pna]);
-         else
-            isNormal = randsrc(1,1,[0 1;1-Pan Pan]);
+         for n = 1 : N
+            if isNormal(n) == 1
+                isNormal(n) = randsrc(1,1,[0 1;Pna(n) 1-Pna(n)]);
+            else
+                isNormal(n) = randsrc(1,1,[0 1;1-Pan(n) Pan(n)]);
+            end
          end
          %--------------MAP 阶段，使用TDMA方式分配时隙--------------;               
          start = (j-1)*TB + 1; 
@@ -217,11 +220,13 @@ for indE = 1:length(NL)%   多种优先级情况下
         hist_B(j,:) = B_buff;
         
         %--------------更新数据采样率：根据之前markov链的结果-------------------------
-        if isNormal == 1
-            lambdaB = lambdaBNormal;
-        else
-            lambdaB = lambdaBAbnormal;
-        end
+        for n = 1 : N
+            if isNormal(n) == 1
+                lambdaB(n) = lambdaBNormal(n);
+            else
+                lambdaB(n) = lambdaBAbnormal(n);
+            end
+         end
         %------------------更新新的动作的好坏信道持续时间-----------------------------
         if (isChange == 1 && isWalk == 1)
             badStateLast = badStateLastWalk;
@@ -287,5 +292,5 @@ for indE = 1:length(NL)%   多种优先级情况下
         
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
-disp('unsaturation VaringLen simulation done!')
-save('VarN_MAC(UP0-2-4-6,N8)(P1_x0.6)(E_th50)(E_cca5).mat');
+disp('unsaturation VarE and FixLen simulation done!')
+save('VarN_MAC(UP0-2-4-6,N8)(E_th50)(E_cca5)VarE.mat');
