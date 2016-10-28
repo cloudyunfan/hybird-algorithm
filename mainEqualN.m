@@ -22,22 +22,22 @@ Tslot = 1;  % slot length (ms)
 Pkt_len = 607; %packet length, unit is bit
 Data_rate = 607.1; % transmission rate (kilo bits per second)
 % yf initialize energy
-E_th = 50;
-E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:1%*******************************%
+E_th = 1; %nJ
+E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:0.1%*******************************%
 E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
 Emax = 20;%
 Bmax = 20;%
 UPclass = [6,4,2,0];
 NL = 8; %3:3:18 只有固定数目的节点
-%-----------数据到达率转移概率-------------
+%-----------数据到达率转移概率（维护多个马尔科夫链）-------------
 isNormal = ones(1,NL); %数据到达是normal状态
 Pna = [0.4 0.4 0.3 0.3 0.2 0.2 0.1 0.1];
 Pan = [0.2 0.2 0.3 0.3 0.4 0.4 0.1 0.1];
 lambdaBNormal = [0.05 0.05 0.03 0.03 0.08 0.08 0.06 0.06];   %数据包每秒到达数 /slot normal状态
 lambdaBAbnormal = [0.1 0.1 0.2 0.2 0.1 0.1 0.2 0.2];   %数据包每秒到达数 /slot normal状态
 lambdaB = lambdaBNormal;
-%--------------动作转移概率：sitting and walking----------------
+%--------------动作转移概率：sitting and walking（维护一个马尔科夫链）----------------
 isChange = 0; %判断动作是否改变
 isWalk = 1;
 Pws = 0.2;
