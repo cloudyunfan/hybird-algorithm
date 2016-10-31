@@ -1,4 +1,4 @@
-function [ pl,ps,outcome,CHN_sta_f ] = pktsend( CHNbefore_leng,CHNafter_leng,CHN_sta_ini,slotNO,Pu,Pd )
+function [ pl,ps,outcome,CHN_sta_f,statelast,isgood ] = pktsend( CHNbefore_leng,CHNafter_leng,CHN_sta_ini,slotNO,Pu,Pd,statelast,isgood,badstatelast,goodstatelast )
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %input:
 %CHNbefore_leng is the former slots length.

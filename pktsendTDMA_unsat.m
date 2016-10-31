@@ -111,15 +111,17 @@ for d = 1:slotNO  % each node i transmit slotNO slots
 end
 % not use
 % outcome of last slot of current node,记录发送包时的信道状态（0：不好；1：好）
-outcome = CHN_sta;
-% update the channel state after transmission
-for e = 1:CHNafter_leng 
-        if CHN_sta == 1
-            CHN_sta = randsrc(1,1,[0 1;Pd 1-Pd]); %%%%%% channel model
-        else
-            CHN_sta = randsrc(1,1,[0 1;1-Pu Pu]); %%%%%% using Markov chain
-        end
-end
-% the final channel state of current node
-CHN_sta_f = CHN_sta;
+% outcome = CHN_sta;
+outcome = 1;
+% % update the channel state after transmission
+% for e = 1:CHNafter_leng 
+%         if CHN_sta == 1
+%             CHN_sta = randsrc(1,1,[0 1;Pd 1-Pd]); %%%%%% channel model
+%         else
+%             CHN_sta = randsrc(1,1,[0 1;1-Pu Pu]); %%%%%% using Markov chain
+%         end
+% end
+% % the final channel state of current node
+% CHN_sta_f = CHN_sta;
+CHN_sta_f = 1;
 end

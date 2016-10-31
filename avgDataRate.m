@@ -10,4 +10,4 @@ abnormal = Pna ./ (Pna + Pan);
 normal = Pan ./ (Pna + Pan);
 
 %计算平均速率
-rate = abnormal*lambdaBAbnormal + normal*lambdaBNormal;
+rate = abnormal.*lambdaBAbnormal + normal.*lambdaBNormal;

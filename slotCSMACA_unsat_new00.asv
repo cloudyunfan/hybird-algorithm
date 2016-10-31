@@ -1,4 +1,4 @@
-function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(rap_length,CSMA_sta,def_time_pre,last_CHN_sta,ReTX_times_pre,CW,last_TX_time,E_buff,B_buff,badstatelast,goodstatelast) %act,,B_buff
+function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(rap_length,CSMA_sta,def_time_pre,last_CHN_sta,ReTX_times_pre,CW,last_TX_time,E_buff,B_buff) %act,,B_buff
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ELE_ex(倒数第四),E_buff,E_flow（最后两个）
 %%% CSMA/CA transmission under unsaturation condition
 % Input:
@@ -102,7 +102,7 @@ while ( t<=rap_length )
             CHNb_leng = t + 1 - last_TX_time(ind_TX); %计算从上一次发送数据包到现在的时间
             % TX one packet, the channel state when the pkt is finished is
             % recorded and used  3.last slot state of current node 4.the last state after the superframe.
-            [ PL_cap,PS_cap,last_CHN_sta(ind_TX), no_use(ind_TX),stateLast(ind_TX),isGood(ind_TX)] = pktsend( CHNb_leng,0,last_CHN_sta(ind_TX),1,Pbg(ind_TX),Pgb(ind_TX),stateLast(ind_TX),isGood(ind_TX),badstatelast,goodstatelast); 
+            [ PL_cap,PS_cap,last_CHN_sta(ind_TX), no_use(ind_TX),stateLast(ind_TX),isGood(ind_TX)] = pktsend( CHNb_leng,0,last_CHN_sta(ind_TX),1,Pbg(ind_TX),Pgb(ind_TX),stateLast(ind_TX),isGood(ind_TX)); 
 %             disp(['node ',num2str(ind_TX),' send Pkt ',num2str(PS_cap),' successfully!']);
            
             %%--------------------修改仿真变量------------------------
@@ -110,7 +110,7 @@ while ( t<=rap_length )
             %如果发送成功则在当前时隙做标记
             if(PS_cap>0)                                
                 last_TX_time(ind_TX) = t + T_pkt;   %当前时隙成功发送了一个包,标记在完成的那个时隙
-%                 TX_time{ind_TX} = [TX_time{ind_TX},last_TX_time(ind_TX)];
+                TX_time{ind_TX} = [TX_time{ind_TX},last_TX_time(ind_TX)];
                 TX_time_rap(last_TX_time(ind_TX),ind_TX) = 1;
             end
             ELE_ex(ind_TX) = ELE_ex(ind_TX) + E_TX;%消耗的能量累积记下 

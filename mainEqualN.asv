@@ -22,22 +22,19 @@ Tslot = 1;  % slot length (ms)
 Pkt_len = 607; %packet length, unit is bit
 Data_rate = 607.1; % transmission rate (kilo bits per second)
 % yf initialize energy
-E_th = 1; %nJ
-E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:0.1%*******************************%
+E_th = 50;
+E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:1%*******************************%
 E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
 Emax = 20;%
 Bmax = 20;%
-UPclass = [6,4,2,0];
-NL = 8; %3:3:18 只有固定数目的节点
-%-----------数据到达率转移概率（维护多个马尔科夫链）-------------
-isNormal = ones(1,NL); %数据到达是normal状态
+%-----------数据到达率转移概率-------------
 Pna = [0.4 0.4 0.3 0.3 0.2 0.2 0.1 0.1];
 Pan = [0.2 0.2 0.3 0.3 0.4 0.4 0.1 0.1];
 lambdaBNormal = [0.05 0.05 0.03 0.03 0.08 0.08 0.06 0.06];   %数据包每秒到达数 /slot normal状态
 lambdaBAbnormal = [0.1 0.1 0.2 0.2 0.1 0.1 0.2 0.2];   %数据包每秒到达数 /slot normal状态
 lambdaB = lambdaBNormal;
-%--------------动作转移概率：sitting and walking（维护一个马尔科夫链）----------------
+%--------------动作转移概率：sitting and walking----------------
 isChange = 0; %判断动作是否改变
 isWalk = 1;
 Pws = 0.2;
@@ -50,6 +47,8 @@ goodStateLastSit = [124 124 57 57 57 57 151 151];
 badStateLast = badStateLastWalk;
 goodStateLast = goodStateLastWalk;
 
+lambdaE = 0.05;   %能量包每秒到达数 /slot
+
 TB = 200; %len_TDMA + len_RAP
 %act = 2;
 %yf omit the MAP
@@ -59,10 +58,14 @@ len_MAP = M*T_block;  %初始MAP的长度%*******************************%
 len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%*******************************%
 % UPH = 6;
 % UPN = 0; 
+%0,,6,7
+UPclass = [6,4,2,0];
+NL = 8; %3:3:18 只有固定数目的节点
+%% ------------------------------------------------------------------------
+for indE = 1:length(NL)%   多种优先级情况下
 %     lambdaE = E_rate(indE);   
-    
+    NLnode = NL(indE)/length(UPclass);
 %   -------------设置节点的优先级----------------------------
-    NLnode = NL/length(UPclass);
 %     UPclass = [UPH,UPN];
 %     NH = NL(indE)-NLnode;
     N_UP = NLnode*ones( 1,length(UPclass) );  %每一种优先级节点的个数
@@ -76,15 +79,13 @@ len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%******************************
     for n=1:N
         CW(n) = CWmin(find(UP==UPnode(n)));  %初始化CW为节点对应优先级的CWmin
     end
-
-%% ------------------------------------------------------------------------
-for indE = 1:10     %多种优先级情况下
-    lambdaE = (indE/100)*ones(1,N);   %能量包每秒到达数 /slot
+    
     %-----信道模型使用半马尔科夫链对信道状态建模，设置信道状态转移概率---------
     Pbg = ones(1,N);
     Pgb = ones(1,N);   %设置每个节点的转移概率
     stateLast = zeros(1,N);   %设置每个节点的信道持续时间
     isGood = randint(1,N);   %随机设置每个节点的初始信道状态
+    isNormal = randint(1,N); %数据到达是normal或者abnormal状态
     
     %------------------初始化电池和缓存数据区----------------
     E_buff = zeros(1,N); % 初始化各节点能量状态为0 
@@ -98,7 +99,8 @@ for indE = 1:10     %多种优先级情况下
     Def_Time_Pre = (-1)*ones(1,N); % initial deferred time -1
     ReTX_time_pre = zeros(1,N);  % 标记节点重传次数
     Succ_TX_time = zeros(Tsim*TB,N);   %记录成功传输的时刻
-    Req = zeros(1,N); %是否在发送请求数据包，初始化为0，不发送请求数据包  
+    Req = zeros(1,N); %是否在发送请求数据包，初始化为0，不发送请求数据包
+    
 
     %--------------一需要统计的结果-------------------------------
     PL_RAP_sp = zeros(Tsim,N);  %丢包数
@@ -126,11 +128,11 @@ for indE = 1:10     %多种优先级情况下
     Swait = waitbar(0,'仿真进度');   %设置进度条
     last_TX_time_RAP = ones(1,N);
     
-    %********************************************************%
+    %*******************************%
     %
-    %                    以超帧为单位迭代
+    %       以超帧为单位迭代
     %
-    %********************************************************%
+    %*******************************%
     for j = 1: Tsim
          %----用马尔科夫链模拟动作转移：sitting and walking----
          if isWalk == 1
@@ -145,19 +147,13 @@ for indE = 1:10     %多种优先级情况下
             end
          end         
          %----用马尔科夫链模拟数据到达率转移：normal and abnormal----
-         for n = 1 : N
-            if isNormal(n) == 1
-                isNormal(n) = randsrc(1,1,[0 1;Pna(n) 1-Pna(n)]);
-            else
-                isNormal(n) = randsrc(1,1,[0 1;1-Pan(n) Pan(n)]);
+         for idx = 1 : N
+            if isNormal == 1
+                isNormal = randsrc(1,1,[0 1;Pna 1-Pna]);
+             else
+                isNormal = randsrc(1,1,[0 1;1-Pan Pan]);
             end
-         end
          
-         %********************************************************%
-         %
-         %                    两个阶段开始
-         %
-         %********************************************************%
          %--------------MAP 阶段，使用TDMA方式分配时隙--------------;               
          start = (j-1)*TB + 1; 
          TDMA_sift = 0;   %偏移量  
@@ -165,7 +161,7 @@ for indE = 1:10     %多种优先级情况下
          indPoll = getPollNode(indMAP,M);  %确定将被poll的节点
          %hist_MAP(j,1:length(indPoll))=indPoll;
          for poll =1:length(indPoll)   %遍历所有高优先级节点的决策行为     
-            ind_node_poll = indPoll(poll); %取下标
+             ind_node_poll = indPoll(poll); %取下标
             %----------scheduled slots---------------
             CHNafter_leng = 0;
             CHNbefore_leng = start + TDMA_sift - last_TX_time(ind_node_poll);
@@ -189,7 +185,7 @@ for indE = 1:10     %多种优先级情况下
         last_TX_time_RAP = last_TX_time - (j-1)*TB - len_MAP;
 %         tic
         %yf Act(action),ignore the act ,always RAP %TDMA_CHN_Sta,
-        [ReTX_time_pre,Def_Time_Pre,CSMA_Sta_Pre,PL_RAP,PS_RAP,Colli_RAP,ELE_RAP,Succ_TX_time_RAP,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(len_RAP,CSMA_Sta_Pre,Def_Time_Pre,RAP_CHN_Sta,ReTX_time_pre,CW,last_TX_time_RAP,E_buff,B_buff,badStateLast,goodStateLast);%ELE_RAP,（倒数第四）,E_buff,E_flow（最后两个）等一下改 CW可以全局传过去
+        [ReTX_time_pre,Def_Time_Pre,CSMA_Sta_Pre,PL_RAP,PS_RAP,Colli_RAP,ELE_RAP,Succ_TX_time_RAP,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(len_RAP,CSMA_Sta_Pre,Def_Time_Pre,RAP_CHN_Sta,ReTX_time_pre,CW,last_TX_time_RAP,E_buff,B_buff);%ELE_RAP,（倒数第四）,E_buff,E_flow（最后两个）等一下改 CW可以全局传过去
 %         toc
         
         PL_RAP_sp(j,:) = PL_RAP;
@@ -223,13 +219,11 @@ for indE = 1:10     %多种优先级情况下
         hist_B(j,:) = B_buff;
         
         %--------------更新数据采样率：根据之前markov链的结果-------------------------
-        for n = 1 : N
-            if isNormal(n) == 1
-                lambdaB(n) = lambdaBNormal(n);
-            else
-                lambdaB(n) = lambdaBAbnormal(n);
-            end
-         end
+        if isNormal == 1
+            lambdaB = lambdaBNormal;
+        else
+            lambdaB = lambdaBAbnormal;
+        end
         %------------------更新新的动作的好坏信道持续时间-----------------------------
         if (isChange == 1 && isWalk == 1)
             badStateLast = badStateLastWalk;
@@ -245,7 +239,6 @@ for indE = 1:10     %多种优先级情况下
             %动作发生改变需不需要重置stateLast
             stateLast = zeros(1,N);   %设置每个节点的信道持续时间
         end
-        
         %--------------进度显示-------------------------------
          str = ['仿真完成', num2str(j*100/Tsim), '%'];     
          waitbar(j/Tsim,Swait,str);
@@ -297,4 +290,4 @@ for indE = 1:10     %多种优先级情况下
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
 disp('unsaturation VarE and FixLen simulation done!')
-save('VarE_MAC(UP0-2-4-6,N8)(E_th1)(E_cca0.1)fix.mat');
+save('VarN_MAC(UP0-2-4-6,N8)(E_th50)(E_cca5)VarE.mat');
