@@ -3,7 +3,7 @@
 %         Author:yf
 %         Date:2016/10/27
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [TDMAalloc] = TDMA_allocation(numOfConLoss, UPnode, E_buff, B_buff, TDMAlen)
+function [TDMAalloc, isSatisfy, TDMAlen] = TDMA_allocation(numOfConLoss, UPnode, E_buff, B_buff, TDMAlen)
 % Input:
 %     numOfConLoss: continuous packet loss of nodes
 %     UPnode: different UP of nodes
@@ -12,11 +12,15 @@ function [TDMAalloc] = TDMA_allocation(numOfConLoss, UPnode, E_buff, B_buff, TDM
 %     TDMAlen: length of TDMA phase in this superframe
 % Output:
 %     TDMAalloc: resource allocation of TDMA phase (slot)
+%     isSatisfy: whether the meet of nodes is satisfied
+%     TDMAlen: new length of tdma
 
 global Emax
-TDMAalloc = zeros(1, length(E_buff)); % length(E_buff)个节点
+N = length(E_buff);
+TDMAalloc = zeros(1, N); % N个节点
 %计算每个节点的需求，一个时隙发一个包，使用一个单位的能量（后期再设计这个函数）
 request = min(E_buff, B_buff);
+isSatisfy = zeros(1, N);
 %归一化参数
 UPnodeO = (UPnode + 1) / 8;
 E_buffO = E_buff / Emax;
@@ -31,11 +35,19 @@ weight = UPnodeO.*(E_buffO - lambda*numOfConLossO);
 %降序排序
 [~, index] = sort(weight, 'descend');
 
+%调整tdma的需求
+TDMAlen = min(sum(request), TDMAlen);
+
 for i = 1 : length(index)
     TDMAalloc(i) = min(request(i), TDMAlen);
     TDMAlen = TDMAlen - TDMAalloc(i);
 end
 
+for i = 1 : N
+    if (TDMAalloc(i) >= request(i))
+        isSatisfy(i) = 1;
+    end
+end
 
 
 

@@ -15,7 +15,7 @@ function [CSMALen, TDMALen, aCLI] = CSMALength_update(numOfConLoss, totalCollisi
 %     TDMALen: new length of TDMA phase (slot)
 %     aCLI: new ACLI
 %% 初始化变量，两个变量等
-global Emax CSMALenMax CSMALenMin TB
+global Emax CSMALenMax CSMALenMin TB 
 a = 2;
 b = 0.5;
 delta = 5;

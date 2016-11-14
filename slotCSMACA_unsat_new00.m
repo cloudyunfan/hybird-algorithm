@@ -1,4 +1,4 @@
-function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(rap_length,CSMA_sta,def_time_pre,last_CHN_sta,ReTX_times_pre,CW,last_TX_time,E_buff,B_buff,badstatelast,goodstatelast) %act,,B_buff
+function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(rap_length,CSMA_sta,def_time_pre,last_CHN_sta,ReTX_times_pre,CW,last_TX_time,E_buff,B_buff,badstatelast,goodstatelast,issatisfy) %act,,B_buff
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%ELE_ex(倒数第四),E_buff,E_flow（最后两个）
 %%% CSMA/CA transmission under unsaturation condition
 % Input:
@@ -11,6 +11,7 @@ function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_b
 %     8.last_TX_time： last time sending packet successfully
 %     10:E_buff:能量缓存区
 %     11:B_buff:数据缓存区
+%     12.issatisfy:是否在CSMA阶段传输（0：传输，1：不传输）
 % Output:
 %     1.ReTX_time: remaining retransmission times after this superframe
 %     2.backoff_after: remaining backoff counter after this superframe
@@ -29,7 +30,7 @@ function [ReTX_time,backoff_after,CSMA_sta,pl_t,ps_t,PL_colli,ELE_ex,TX_time,E_b
 % parameters initialization 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-global Data_rate Pkt_len Tslot Pbg Pgb CWmin CWmax UP UPnode E_TX E_CCA stateLast isGood%isMAP isRAP 
+global Data_rate Pkt_len Tslot Pbg Pgb CWmin CWmax UP UPnode E_TX E_CCA stateLast isGood %isMAP isRAP 
 
 %-----------参数---------------------------------------------------------
 
@@ -41,7 +42,7 @@ N = length(E_buff);  %获取使用CSMA/CA的节点数
 ReTX_time = ReTX_times_pre;  %读取上一超帧中的重传次数记录
 TX_time_rap = zeros(rap_length,N); % the time when node send pkt successfully
 
-Backoff_time = -1*ones(1,N);%zeros(1,N); % temporal variable to record backoff time
+Backoff_time = def_time_pre;%zeros(1,N); % temporal variable to record backoff time
 CHN = zeros(1,rap_length); % 初始化每个时隙的信道状况为空闲
 ELE_ex = zeros(1,N); % 记录本超帧消耗的总能量
 ELE_tx = zeros(1,N); % 记录本超帧传输消耗的总能量
@@ -53,12 +54,12 @@ numIdleCHN = zeros(1,N); %record number of successive idle CHN when backoff coun
 no_use = zeros(1,N);
 pl_t = zeros(1,N);
 ps_t = zeros(1,N);
-PL_colli = zeros(1,N); % pkt loss caused by collisions
+PL_colli = zeros(1,N); % pktloss caused by collisions
 Count = zeros(1,N); %times of nodes transmission
 %yf能量初始化
 EH_sp = zeros(rap_length,N);
 %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
 % initialization is over, protocol is started.
 % to check every time point during CAP period there are four states for
 % nodes. When instant time exceed CAP length, protocol stops.
@@ -68,7 +69,143 @@ while ( t<=rap_length )
 %%    
     CHNflag = ones(1,N);  %初始化信道标记（1：忙；0：空闲）
     isCCA = zeros(1,N); %yf判断是不是第一次进入
-   %% check how many nodes want to send packet at this moment
+    %% 逐一查看每个节点，修改他们的状态
+    %检查是否要解锁退避计数器
+    for n=1:N 
+         %-------------CCA----------------%
+%          if ( isFirst==0 &&  Backoff_time(n) == 0 && CSMA_sta(n)==2 ) %不是第一次且退避计数器为0，就不用CCA了
+%              break;
+%          else
+        if ( CSMA_sta(n)==1 )
+          if (Backoff_time(n) == 1) %yf
+            if( E_buff(n)>=(E_CCA+E_TX) && B_buff(n)>=1 && issatisfy(n) == 0) %&&isRAP(n)==1
+              %进行信道状态检查CCA
+              ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
+              E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
+              if(CHN(t)==0) %yf如果时隙的信道状况为空闲
+                   CHNflag(n) = 0;                 %标记信道为空闲 
+              end
+              if(backoff_lock(n)==1)           
+                   if( CHNflag(n)==0  )  %节点处于发送数据状态时不进行空闲信道的计数
+                      numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
+                   else
+                      numIdleCHN(n) = 0;    %reset the number
+                   end
+                   if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
+                       backoff_lock(n) = 0;    %unlock the backoff counter
+                       numIdleCHN(n) = 0;    %reset the number
+                   end
+              end   
+              isCCA(n) = 1;
+            end
+             
+          else %yf
+              
+             if( E_buff(n)>=(E_CCA + E_TX) && B_buff(n)>=1 && issatisfy(n) == 0)%&&isRAP(n)==1
+               %进行信道状态检查CCA
+               ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
+               E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
+               if(CHN(t)==0) %yf如果时隙的信道状况为空闲
+                    CHNflag(n) = 0;                 %标记信道为空闲 
+               end
+               if(backoff_lock(n)==1)           
+                    if( CHNflag(n)==0 )  %节点处于发送数据状态时不进行空闲信道的计数
+                       numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
+                    else
+                       numIdleCHN(n) = 0;    %reset the number
+                    end
+                    if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
+                        backoff_lock(n) = 0;    %unlock the backoff counter
+                        numIdleCHN(n) = 0;    %reset the number
+                    end
+               end   
+               isCCA(n) = 1;
+             end             
+          end %yf end backoff
+        else
+            if( (CSMA_sta(n)==0)&&(def_time_pre(n)~= -1)) 
+                   if( E_buff(n)>=(E_CCA+E_TX) && B_buff(n)>=1 && issatisfy(n) == 0) %&&isRAP(n)==1
+              %进行信道状态检查CCA
+                      ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
+                      E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
+                      if(CHN(t)==0) %yf如果时隙的信道状况为空闲
+                           CHNflag(n) = 0;                 %标记信道为空闲 
+                      end
+                      if(backoff_lock(n)==1)           
+                           if( CHNflag(n)==0  )  %节点处于发送数据状态时不进行空闲信道的计数
+                              numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
+                           else
+                              numIdleCHN(n) = 0;    %reset the number
+                           end
+                           if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
+                               backoff_lock(n) = 0;    %unlock the backoff counter
+                               numIdleCHN(n) = 0;    %reset the number
+                           end
+                      end   
+                     isCCA(n) = 1;
+                   end
+            end
+        end
+    end %end for
+    
+    %检查节点状态
+    for n=1:N  
+        if( (rap_length-t-T_pkt)>=0 && issatisfy(n) == 0 && E_buff(n)>=(E_CCA+E_TX)) % &&isRAP(n)==1  &&E_buff(n)>=(E_TX)
+            %%----- case 0:initialize the backoff counter
+            if( CSMA_sta(n)==0 ) % 0 state for backoff                    
+                if def_time_pre(n) == -1 %节点没有获取过任何RAP阶段的时隙                    
+                    Backoff_time(n) = randint(1,1,[1,CW(n)]);  
+                    backoff_lock(n) = 1;  %lock the backoff counter after reset it
+                else % nodes with defer 上一超帧中的backoff time有剩余
+                    Backoff_time(n) = def_time_pre(n); 
+                    def_time_pre(n) = -1;
+                end % yf已经确定def_time_pre =1
+                CSMA_sta(n) = 1;
+            end
+
+            %%-----------------case 1:进入退避------------------
+            if( CSMA_sta(n)==1&&backoff_lock(n)==0&&isCCA(n)== 1 ) 
+                if(Backoff_time(n) == 1) %yf退避到1，下一个时隙到0，进入发送状态,进入发送状态 Backoff_time(n) == 0
+                      %一个时隙可以完成的动作：1、CCA+把包发送到物理层；2、通过天线将数据包发送出去和接受对应的ACK（这个是时隙的整数倍）
+                      if( CHNflag(n)==0) % channel is idle,energy is enough,there has pkt to send                                
+                        % now it can be TX_ready，先将节点设置为准备发送数据状态
+%                           Backoff_time(n) = 0;%yf退避计数器为0，进入发送状态
+                          TX_ready(n) = 1;    %准备在下一个时隙开始占用信道发送数据                              
+                          CHN( t+1:t+T_pkt ) = 1;  %set the CHN of following slot busy                              
+                          TX_finish_time(n) =  t + T_pkt;  %无论发送成功与否，需要到发送完后才能知道，这期间节点始终处于发送阶段
+                          CSMA_sta(n) = 2; % set the state of node to 2
+                      else %channel is busy yf,有问题，一会儿
+                         backoff_lock(n) = 1;   %CHN is busy ,lock the backoff counter
+                         numIdleCHN(n) = 0;    %reset the number of slot with idle CHN
+                      end %end CHN                          
+                else %继续退避                         
+                     if( CHNflag(n)==0 ) % 信道空闲才执行退避时间减1
+                         Backoff_time(n) = Backoff_time(n) - 1;  %退避时间减1                    
+                     else
+                         backoff_lock(n) = 1;   %CHN is busy ,lock the backoff counter
+                         numIdleCHN(n) = 0;    %reset the number of slot with idle CHN
+                     end
+                end 
+            end
+
+             % --case 2:check the nodes are sending packets--------------                 
+            if( CSMA_sta(n)==2 )   
+                 if(t == TX_finish_time(n))  %finish TX
+                     CSMA_sta(n) = 0;
+                 end                                           
+            end
+        else
+            if( (rap_length - t - T_pkt)<0 && issatisfy(n) == 0)
+                %如果后面剩余的时间无法完成发送包的任务,则退避时间锁定等到下一超帧再启动
+                backoff_after(n) = Backoff_time(n); %yf,next def_time_pre
+                backoff_lock(n) = 1;   %if remaining time is not enough, lock backoff counter
+                numIdleCHN(n) = 0;    %reset the number of slot with idle CHN
+                CSMA_sta(n) = 0;      %返回初始状态
+            end
+        end %end if
+
+    end  %end for
+       %% check how many nodes want to send packet at this moment
 %     核查同时隙中处即将发送包的状态的时节点数，若大于1，则冲突，发送的数据将失败，否则可以发送数据。
     ind_TX = find(TX_ready==1);
     Count(ind_TX) = Count(ind_TX) + 1;
@@ -122,169 +259,6 @@ while ( t<=rap_length )
         end
     end
     TX_ready(ind_TX) = 0;   %重置标志位    
-    %% 逐一查看每个节点，修改他们的状态
-    %检查是否要解锁退避计数器
-    for n=1:N 
-         %-------------CCA----------------%
-%          if ( isFirst==0 &&  Backoff_time(n) == 0 && CSMA_sta(n)==2 ) %不是第一次且退避计数器为0，就不用CCA了
-%              break;
-%          else
-        if ( CSMA_sta(n)==1 )
-          if (Backoff_time(n) == 1) %yf
-            if( E_buff(n)>=(E_CCA+E_TX) && B_buff(n)>=1) %&&isRAP(n)==1
-              %进行信道状态检查CCA
-              ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
-              E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
-              if(CHN(t)==0) %yf如果时隙的信道状况为空闲
-                   CHNflag(n) = 0;                 %标记信道为空闲 
-              end
-              if(backoff_lock(n)==1)           
-                   if( CHNflag(n)==0  )  %节点处于发送数据状态时不进行空闲信道的计数
-                      numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
-                   else
-                      numIdleCHN(n) = 0;    %reset the number
-                   end
-                   if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
-                       backoff_lock(n) = 0;    %unlock the backoff counter
-                       numIdleCHN(n) = 0;    %reset the number
-                   end
-              end   
-              isCCA(n) = 1;
-            end
-             
-          else %yf
-              
-             if( E_buff(n)>=(E_CCA + E_TX) && B_buff(n)>=1 )%&&isRAP(n)==1
-               %进行信道状态检查CCA
-               ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
-               E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
-               if(CHN(t)==0) %yf如果时隙的信道状况为空闲
-                    CHNflag(n) = 0;                 %标记信道为空闲 
-               end
-               if(backoff_lock(n)==1)           
-                    if( CHNflag(n)==0 )  %节点处于发送数据状态时不进行空闲信道的计数
-                       numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
-                    else
-                       numIdleCHN(n) = 0;    %reset the number
-                    end
-                    if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
-                        backoff_lock(n) = 0;    %unlock the backoff counter
-                        numIdleCHN(n) = 0;    %reset the number
-                    end
-               end   
-               isCCA(n) = 1;
-             end
-              
-          end %yf end backoff
-        else
-            if( (CSMA_sta(n)==0)&&(def_time_pre(n)~= -1)) 
-                if (def_time_pre(n) == 1) %yf
-                   if( E_buff(n)>=(E_CCA+E_TX) && B_buff(n)>=1 ) %&&isRAP(n)==1
-              %进行信道状态检查CCA
-                      ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
-                      E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
-                      if(CHN(t)==0) %yf如果时隙的信道状况为空闲
-                           CHNflag(n) = 0;                 %标记信道为空闲 
-                      end
-                      if(backoff_lock(n)==1)           
-                           if( CHNflag(n)==0  )  %节点处于发送数据状态时不进行空闲信道的计数
-                              numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
-                           else
-                              numIdleCHN(n) = 0;    %reset the number
-                           end
-                           if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
-                               backoff_lock(n) = 0;    %unlock the backoff counter
-                               numIdleCHN(n) = 0;    %reset the number
-                           end
-                      end   
-                     isCCA(n) = 1;
-                   end
-             
-             else %yf
-
-                 if( E_buff(n)>=(E_CCA + E_TX) && B_buff(n)>=1 )%&&isRAP(n)==1
-                       %进行信道状态检查CCA
-                       ELE_ex(n) = ELE_ex(n) + E_CCA;  %消耗的能量累积记下
-                       E_buff(n) = E_buff(n) - E_CCA;   %消耗掉能量
-                       if(CHN(t)==0) %yf如果时隙的信道状况为空闲
-                            CHNflag(n) = 0;                 %标记信道为空闲 
-                       end
-                       if(backoff_lock(n)==1)           
-                            if( CHNflag(n)==0 )  %节点处于发送数据状态时不进行空闲信道的计数
-                               numIdleCHN(n) = numIdleCHN(n) + 1;  %count the number of successive idle CHN during backoff counter is locked
-                            else
-                               numIdleCHN(n) = 0;    %reset the number
-                            end
-                            if(numIdleCHN(n)>=SIFS && (rap_length-t-T_pkt)>=0 )  %channel has been idle for SIFS time and remaining time is enough to send pkt
-                                backoff_lock(n) = 0;    %unlock the backoff counter
-                                numIdleCHN(n) = 0;    %reset the number
-                            end
-                       end   
-                       isCCA(n) = 1;
-                  end
-
-                end %yf end def
-            end
-        end
-    end %end for
-    
-    %检查节点状态
-    for n=1:N  
-        if( (rap_length-t-T_pkt)>=0 ) % &&isRAP(n)==1  &&E_buff(n)>=(E_TX)
-            %%----- case 0:initialize the backoff counter
-            if( CSMA_sta(n)==0 ) % 0 state for backoff                    
-                if def_time_pre(n) == -1 %节点没有获取过任何RAP阶段的时隙                    
-                    Backoff_time(n) = randint(1,1,[1,CW(n)]);  
-                    backoff_lock(n) = 1;  %lock the backoff counter after reset it
-                else % nodes with defer 上一超帧中的backoff time有剩余
-                    Backoff_time(n) = def_time_pre(n); 
-                    def_time_pre(n) = -1;
-                end % yf已经确定def_time_pre =1
-                CSMA_sta(n) = 1;
-            end
-
-            %%-----------------case 1:进入退避------------------
-            if( CSMA_sta(n)==1&&backoff_lock(n)==0&&isCCA(n)== 1 ) 
-                if(Backoff_time(n) == 1) %yf退避到1，下一个时隙到0，进入发送状态,进入发送状态 Backoff_time(n) == 0
-                      %一个时隙可以完成的动作：1、CCA+把包发送到物理层；2、通过天线将数据包发送出去和接受对应的ACK（这个是时隙的整数倍）
-                      if( CHNflag(n)==0) % channel is idle,energy is enough,there has pkt to send                                
-                        % now it can be TX_ready，先将节点设置为准备发送数据状态
-%                           Backoff_time(n) = 0;%yf退避计数器为0，进入发送状态
-                          TX_ready(n) = 1;    %准备在下一个时隙开始占用信道发送数据                              
-                          CHN( t+1:t+T_pkt ) = 1;  %set the CHN of following slot busy                              
-                          TX_finish_time(n) =  t + T_pkt;  %无论发送成功与否，需要到发送完后才能知道，这期间节点始终处于发送阶段
-                          CSMA_sta(n) = 2; % set the state of node to 2
-                      else %channel is busy yf,有问题，一会儿
-                         backoff_lock(n) = 1;   %CHN is busy ,lock the backoff counter
-                         numIdleCHN(n) = 0;    %reset the number of slot with idle CHN
-                      end %end CHN                          
-                else %继续退避                         
-                     if( CHNflag(n)==0 ) % 信道空闲才执行退避时间减1
-                         Backoff_time(n) = Backoff_time(n) - 1;  %退避时间减1                    
-                     else
-                         backoff_lock(n) = 1;   %CHN is busy ,lock the backoff counter
-                         numIdleCHN(n) = 0;    %reset the number of slot with idle CHN
-                     end
-                end 
-            end
-
-             % --case 2:check the nodes are sending packets--------------                 
-            if( CSMA_sta(n)==2 )   
-                 if(t == TX_finish_time(n))  %finish TX
-                     CSMA_sta(n) = 0;
-                 end                                           
-            end
-        else
-            if( (rap_length - t - T_pkt)<0 )
-                %如果后面剩余的时间无法完成发送包的任务,则退避时间锁定等到下一超帧再启动
-                backoff_after(n) = Backoff_time(n); %yf,next def_time_pre
-                backoff_lock(n) = 1;   %if remaining time is not enough, lock backoff counter
-                numIdleCHN(n) = 0;    %reset the number of slot with idle CHN
-                CSMA_sta(n) = 0;      %返回初始状态
-            end
-        end %end if
-
-    end  %end for
     %%
     %yf每个时隙的能量改变
 %    [e_flow,E_buff] = buff_update_new(E_buff);
