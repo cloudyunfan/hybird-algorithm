@@ -3,7 +3,7 @@
 %         Author:yf
 %         Date:2016/10/27
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [TDMAalloc, isSatisfy, TDMAlen] = TDMA_allocation(numOfConLoss, UPnode, E_buff, B_buff, TDMAlen)
+function [TDMAalloc, isSatisfy, len_MAP] = TDMA_allocation(numOfConLoss, UPnode, E_buff, B_buff, TDMAlen, lambda)
 % Input:
 %     numOfConLoss: continuous packet loss of nodes
 %     UPnode: different UP of nodes
@@ -13,7 +13,7 @@ function [TDMAalloc, isSatisfy, TDMAlen] = TDMA_allocation(numOfConLoss, UPnode,
 % Output:
 %     TDMAalloc: resource allocation of TDMA phase (slot)
 %     isSatisfy: whether the meet of nodes is satisfied
-%     TDMAlen: new length of tdma
+%     len_MAP: new length of tdma
 
 global Emax
 N = length(E_buff);
@@ -28,7 +28,6 @@ E_buffO = E_buff / Emax;
 numOfConLossO = ( numOfConLoss - min(numOfConLoss) ) / ( max(numOfConLoss) - min(numOfConLoss) );
 
 %计算节点对应参数
-lambda = 0.8;
 weight = UPnodeO.*(E_buffO - lambda*numOfConLossO);
 
 %求解优化函数：利用贪心算法（暂时不考虑可传输函数的约束）
@@ -37,6 +36,7 @@ weight = UPnodeO.*(E_buffO - lambda*numOfConLossO);
 
 %调整tdma的需求
 TDMAlen = min(sum(request), TDMAlen);
+len_MAP = TDMAlen;
 
 for i = 1 : length(index)
     TDMAalloc(i) = min(request(i), TDMAlen);

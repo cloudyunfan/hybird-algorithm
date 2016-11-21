@@ -18,10 +18,13 @@ function [CSMALen, TDMALen, aCLI] = CSMALength_update(numOfConLoss, totalCollisi
 global Emax CSMALenMax CSMALenMin TB 
 a = 2;
 b = 0.5;
-delta = 5;
+delta = 10;
 %% 计算CSMA阶段长度调整因子
 CLI = (numOfConLoss / totalCollision).*(E_buff / Emax);
 aCLI = mean(CLI);
+if isnan(aCLI)
+    aCLI = 10000;
+end
 %% 长度调整算法
 if aCLI > a*oldACLI
     CSMALen = min(CSMALenMax, oldCSMALen + delta);
