@@ -192,11 +192,15 @@ for indE = 1:10    %多种能量到达速率情况下
          %--------------tdma阶段长度确定以后，进行tdma阶段的资源分配：slotNO，要根据节点需求重新调整MAP的长度-----------------------
          %调整不同节点的现有的
          for i = 1 : N
-            if (nodesPredictLast(i) > predictLast)
-                TDMA_con_pktloss(i) = -1; %超过一定时间就重置为未知信道状态
-                nodesPredictLast(i) = 0;
+            if (TDMAalloc(i) >= request(i))
+                isSatisfy(i) = 1;
             end
-         end
+            if (TDMAalloc(i) > 0)
+                nodesPredictLast(i) = 1;
+            else
+                nodesPredictLast(i) = nodesPredictLast(i) + 1;
+            end
+        end
          [slotNO, isSatisfy, len_MAP, nodesPredictLast] = TDMA_allocation(TDMA_con_pktloss, UPnode, E_buff_esti, B_buff_esti, len_MAP, lambda, nodesPredictLast);
          
          %-------------如果资源分配以后tdma的长度过长，则重新调整tdma和CSMA的长度------------------
@@ -354,4 +358,4 @@ for indE = 1:10    %多种能量到达速率情况下
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
 disp('unsaturation VarE and FixLen simulation done!')
-save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)varyResetChannel.mat');
+save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)vary.mat');

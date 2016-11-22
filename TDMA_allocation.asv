@@ -17,7 +17,7 @@ function [TDMAalloc, isSatisfy, len_MAP, nodesPredictLast] = TDMA_allocation(num
 %     len_MAP: new length of tdma
 %     nodesPredictLast: Predict last time of nodes
 
-global Emax 
+global Emax predictLast
 N = length(E_buff);
 TDMAalloc = zeros(1, N); % N个节点
 %计算每个节点的需求，一个时隙发一个包，使用一个单位的能量（后期再设计这个函数）
