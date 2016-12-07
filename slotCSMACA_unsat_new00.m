@@ -36,7 +36,7 @@ global Data_rate Pkt_len Tslot Pbg Pgb CWmin CWmax UP UPnode E_TX E_CCA stateLas
 
 SIFS = 0.5;      %最短帧间间隔0 yf 有点问题，一会儿改0.5
 T_pkt = ceil( Pkt_len/(Data_rate*Tslot) );  %time to send a packet and receive ACK,unit slot
-M = 4;        %最大重传次数
+M = 0;        %最大重传次数 等于0是不重传
 N = length(E_buff);  %获取使用CSMA/CA的节点数
 
 ReTX_time = ReTX_times_pre;  %读取上一超帧中的重传次数记录

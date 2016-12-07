@@ -92,7 +92,7 @@ for indE = 1:10    %多种能量到达速率情况下
     totalCollision = 0; %设置上一超帧中CSMA阶段的总的冲突次数
     
     %-----设置不同节点的能量/数据包到达速率---------------------------
-    lambdaE = 5*(indE/100)*ones(1,N);   %能量包每slot到达数
+    lambdaE = (indE/100)*ones(1,N);   %能量包每slot到达数
     isNormal = ones(1,NL); %数据到达是normal状态
     lambdaB = lambdaBNormal;   %数据包每slot到达数（包含了N个）
     
@@ -122,7 +122,7 @@ for indE = 1:10    %多种能量到达速率情况下
     last_B_buff = zeros(1,N);
     last_E_buff = zeros(1,N);
     
-    %--------------一需要统计的结果-------------------------------
+    %---------------需要统计的结果-------------------------------
     PL_RAP_sp = zeros(Tsim,N);  %丢包数
     PL_MAP_sp = zeros(Tsim,N);
     Colli_RAP_sp = zeros(Tsim,N);
@@ -154,9 +154,11 @@ for indE = 1:10    %多种能量到达速率情况下
     %
     %********************************************************%
     %-------------更新普通节点的能量数值初始buffer------------------
-    [~,~,~,~,last_E_buff,last_B_buff] = buff_update(TB,last_E_buff,last_B_buff);
-    [~,~,~,~,last_E_buff,last_B_buff] = buff_update(TB,last_E_buff,last_B_buff);
-
+    [~,~,~,~,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
+    [~,~,~,~,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
+    last_B_buff = B_buff;
+    last_E_buff = E_buff;
+    
     for j = 1: Tsim
          %----用马尔科夫链模拟动作转移：sitting and walking----
          if isWalk == 1
@@ -342,16 +344,16 @@ for indE = 1:10    %多种能量到达速率情况下
 %         Act_time(indE) = mean(actTime_sp);
         EH_WBAN(indE) = sum( sum(EH_sp) )/N;
         %yf
-        ELE_of_WBAN(indE) = sum( sum(ELE_RAP_sp) )/N;
+        ELE_of_WBAN(indE) = sum( sum(ELE_RAP_sp+ELE_RAP_sp) )/N;
         Interval_WBAN(indE) = mean(Intv);
         %yf
-        ELE_WBAN(indE) = sum( sum(ELE_RAP_sp) )/N;
+        ELE_WBAN(indE) = sum( sum(ELE_RAP_sp+ELE_MAP_sp) )/N;
         %yf
-        PS_WBAN(indE) = sum( sum(PS_RAP_sp) )/N;       
+        PS_WBAN(indE) = sum( sum(PS_RAP_sp+PS_MAP_sp) )/N;       
         Colli_WBAN(indE) = sum( sum(Colli_RAP_sp) )/N;
-        Pktloss_WBAN(indE) = sum(sum( PL_RAP_sp ))/sum(sum( PS_RAP_sp ));
+        Pktloss_WBAN(indE) = sum(sum( PL_RAP_sp+PL_MAP_sp ))/sum(sum( PS_RAP_sp+PS_MAP_sp ));
         
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
 disp('unsaturation VarE and FixLen simulation done!')
-save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)varyResetChannel.mat');
+save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)(delta5)(a3)(b0.5)varyResetChannel.mat');

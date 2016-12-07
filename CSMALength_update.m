@@ -16,9 +16,9 @@ function [CSMALen, TDMALen, aCLI] = CSMALength_update(numOfConLoss, totalCollisi
 %     aCLI: new ACLI
 %% 初始化变量，两个变量等
 global Emax CSMALenMax CSMALenMin TB 
-a = 2;
-b = 0.5;
-delta = 10;
+a = 3; %2
+b = 0.5; %0.5
+delta = 5;
 %% 计算CSMA阶段长度调整因子
 CLI = (numOfConLoss / totalCollision).*(E_buff / Emax);
 aCLI = mean(CLI);
