@@ -9,7 +9,6 @@ clc
 %yf energy threshold,energy for transmission and CCA
 global E_th
 global N Tslot Data_rate TB Pbg Pgb CW CWmin CWmax UP UPnode Pkt_len Emax Bmax lambdaE lambdaB E_TX E_CCA Tsim stateLast isGood %isMAP lambdaE Emax Bmax isRAP
-global CSMALenMax CSMALenMin predictLast
 %yf probability of arrive one unit energy in each slot
 %global P1_x
 %------------802.15.6相关的全局参数---------
@@ -18,25 +17,25 @@ CWmin = [16,16,8,8,4,4,2,1];
 CWmax = [64,32,32,16,16,8,8,4];
 
 %----------------------设置参数-----------------------------------------------------
-Tsim = 200; %NO. of superframes simulated
+Tsim = 2000; %NO. of superframes simulated
 Tslot = 1;  % slot length (ms)
 Pkt_len = 607; %packet length, unit is bit
 Data_rate = 607.1; % transmission rate (kilo bits per second)
 % yf initialize energy
-E_th = 10; %nJ
+E_th = 1; %nJ
 E_CCA = E_th/10;   %信道检测消耗的能量,发送、接受、侦听比例1:1:0.1%*******************************%
 E_TX = E_th;       %发送数据包需要的能量
 %P1_x = 0.6;
-Emax = 200;%
-Bmax = 200;%
+Emax = 20;%
+Bmax = 20;%
 UPclass = [6,4,2,0];
-NL = 16; %3:3:18 只有固定数目的节点
+NL = 8; %3:3:18 只有固定数目的节点
 %-----------数据到达率转移概率（维护多个马尔科夫链）-------------
 isNormal = ones(1,NL); %数据到达是normal状态
-Pna = [0.4 0.4 0.4 0.4 0.3 0.3 0.3 0.3 0.2 0.2 0.2 0.2 0.1 0.1 0.1 0.1];
-Pan = [0.2 0.2 0.2 0.2 0.3 0.3 0.3 0.3 0.4 0.4 0.4 0.4 0.1 0.1 0.1 0.1];
-lambdaBNormal = [0.05 0.05 0.05 0.05 0.03 0.03 0.03 0.03 0.08 0.08 0.08 0.08 0.06 0.06 0.06 0.06];   %数据包每秒到达数 /slot normal状态
-lambdaBAbnormal = [0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2 0.1 0.1 0.1 0.1 0.2 0.2 0.2 0.2];   %数据包每秒到达数 /slot normal状态
+Pna = [0.4 0.4 0.3 0.3 0.2 0.2 0.1 0.1];
+Pan = [0.2 0.2 0.3 0.3 0.4 0.4 0.1 0.1];
+lambdaBNormal = [0.05 0.05 0.03 0.03 0.08 0.08 0.06 0.06];   %数据包每秒到达数 /slot normal状态
+lambdaBAbnormal = [0.1 0.1 0.2 0.2 0.1 0.1 0.2 0.2];   %数据包每秒到达数 /slot normal状态
 lambdaB = lambdaBNormal;
 %--------------动作转移概率：sitting and walking（维护一个马尔科夫链）----------------
 isChange = 0; %判断动作是否改变
@@ -44,17 +43,16 @@ isWalk = 1;
 Pws = 0.2;
 Psw = 0.2;
 % walking and sitting state (slots)
-badStateLastWalk = [12 12 12 12 32 32 32 32 32 32 32 32 25 25 25 25];
-goodStateLastWalk = [52 52 52 52 72 72 72 72 72 72 72 72 77 77 77 77];
-badStateLastSit = [28 28 28 28 84 84 84 84 84 84 84 84 65 65 65 65];
-goodStateLastSit = [124 124 124 124 57 57 57 57 57 57 57 57 151 151 151 151];
+badStateLastWalk = [12 12 32 32 32 32 25 25];
+goodStateLastWalk = [52 52 72 72 72 72 77 77];
+badStateLastSit = [28 28 84 84 84 84 65 65];
+goodStateLastSit = [124 124 57 57 57 57 151 151];
 badStateLast = badStateLastWalk;
 goodStateLast = goodStateLastWalk;
-predictLast = 1; %单位为超帧
+
+lambdaE = 0.05*ones(1,NL);   %能量包每秒到达数 /slot
 
 TB = 200; %len_TDMA + len_RAP
-CSMALenMax = TB;
-CSMALenMin = 0;
 %act = 2;
 %yf omit the MAP
 M = 10;   %MAP中询问的时隙块数 M = 7;
@@ -63,9 +61,13 @@ len_MAP = M*T_block;  %初始MAP的长度%*******************************%
 len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%*******************************%
 % UPH = 6;
 % UPN = 0; 
-%     lambdaE = E_rate(indE);      
+%0,,6,7
+
+%% ------------------------------------------------------------------------
+for indE = 1:length(NL)%   多种优先级情况下
+%     lambdaE = E_rate(indE);   
+    NLnode = NL(indE)/length(UPclass);
 %   -------------设置节点的优先级----------------------------
-    NLnode = NL/length(UPclass);
 %     UPclass = [UPH,UPN];
 %     NH = NL(indE)-NLnode;
     N_UP = NLnode*ones( 1,length(UPclass) );  %每一种优先级节点的个数
@@ -79,22 +81,6 @@ len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%******************************
     for n=1:N
         CW(n) = CWmin(find(UP==UPnode(n)));  %初始化CW为节点对应优先级的CWmin
     end
-
-%% ------------------------------------------------------------------------
-for indE = 1:10    %多种能量到达速率情况下
-    for lambda = 1.6 : 1.6
-    M = 10;   %MAP中询问的时隙块数 M = 7;
-    %-----设置CSMA和TDMA阶段的初始长度------------------------
-    T_block = 10;  %MAP中每一个块的时隙数
-    len_MAP = M*T_block;  %初始MAP的长度%*******************************%
-    len_RAP = TB-len_MAP; %初始RAP阶段固定有100个时隙%*******************************%
-    aCLI = 0; % 设置CSMA阶段的长度调整因子
-    totalCollision = 0; %设置上一超帧中CSMA阶段的总的冲突次数
-    
-    %-----设置不同节点的能量/数据包到达速率---------------------------
-    lambdaE = 2*(indE/100)*ones(1,N);   %能量包每slot到达数
-    isNormal = ones(1,NL); %数据到达是normal状态
-    lambdaB = lambdaBNormal;   %数据包每slot到达数（包含了N个）
     
     %-----信道模型使用半马尔科夫链对信道状态建模，设置信道状态转移概率---------
     Pbg = ones(1,N);
@@ -106,9 +92,6 @@ for indE = 1:10    %多种能量到达速率情况下
     E_buff = zeros(1,N); % 初始化各节点能量状态为0 
     B_buff = zeros(1,N);
     
-    %------------------初始化信道预测的有效时间，过了时间信道就恢复未知状态-1--------------
-    nodesPredictLast = zeros(1,N); %节点信道预测的持续时间
-
     %----------------仿真变量-----------------------------
     RAP_CHN_Sta = ones(1,N); % initial channel assumed to be GOOD. temperal variable to record every INITIAL state in a superframe
     TDMA_CHN_Sta = ones(1,N);    % initial channel assumed to be GOOD
@@ -117,12 +100,10 @@ for indE = 1:10    %多种能量到达速率情况下
     Def_Time_Pre = (-1)*ones(1,N); % initial deferred time -1
     ReTX_time_pre = zeros(1,N);  % 标记节点重传次数
     Succ_TX_time = zeros(Tsim*TB,N);   %记录成功传输的时刻
-    Req = zeros(1,N); %是否在发送请求数据包，初始化为0，不发送请求数据包  
-    TDMA_con_pktloss = -1*ones(1,N); %初始状态为不定状态 -1：是默认信道好的状态
-    last_B_buff = zeros(1,N);
-    last_E_buff = zeros(1,N);
+    Req = zeros(1,N); %是否在发送请求数据包，初始化为0，不发送请求数据包
     
-    %---------------需要统计的结果-------------------------------
+
+    %--------------一需要统计的结果-------------------------------
     PL_RAP_sp = zeros(Tsim,N);  %丢包数
     PL_MAP_sp = zeros(Tsim,N);
     Colli_RAP_sp = zeros(Tsim,N);
@@ -153,12 +134,6 @@ for indE = 1:10    %多种能量到达速率情况下
     %                    以超帧为单位迭代
     %
     %********************************************************%
-    %-------------更新普通节点的能量数值初始buffer------------------
-    [~,~,~,~,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
-    [~,~,~,~,E_buff,B_buff] = buff_update(TB,E_buff,B_buff);
-    last_B_buff = B_buff;
-    last_E_buff = E_buff;
-    
     for j = 1: Tsim
          %----用马尔科夫链模拟动作转移：sitting and walking----
          if isWalk == 1
@@ -180,64 +155,38 @@ for indE = 1:10    %多种能量到达速率情况下
                 isNormal(n) = randsrc(1,1,[0 1;1-Pan(n) Pan(n)]);
             end
          end
-         
-         %********************************************************%
-         %
-         %                    两个阶段开始
-         %
-         %********************************************************%
-         %--------------获得不同节点上一个超帧的状态（连续丢包数目，冲突次数，数据、能量水平估计），调整CSMA阶段的长度-------------
-         B_buff_esti = min(floor(last_B_buff + ((j - 1)*TB + 1 - last_TX_time).*lambdaB), Bmax); %需要一个last_B_buff和一个last_E_buff代表上次传输成功的两个buff的水平
-         E_buff_esti = min(floor(last_E_buff + ((j - 1)*TB + 1 - last_TX_time).*lambdaE), Emax);
-         [~, len_MAP, aCLI] = CSMALength_update(TDMA_con_pktloss, totalCollision, E_buff_esti, len_RAP, aCLI);
-         
-         %--------------tdma阶段长度确定以后，进行tdma阶段的资源分配：slotNO，要根据节点需求重新调整MAP的长度-----------------------
-         %调整不同节点的现有的
-         for i = 1 : N
-            if (nodesPredictLast(i) > predictLast)
-                TDMA_con_pktloss(i) = -1; %超过一定时间就重置为未知信道状态
-                nodesPredictLast(i) = 0;
-            end
-         end
-         [slotNO, isSatisfy, len_MAP, nodesPredictLast] = TDMA_allocation(TDMA_con_pktloss, UPnode, E_buff_esti, B_buff_esti, len_MAP, lambda, nodesPredictLast);
-         
-         %-------------如果资源分配以后tdma的长度过长，则重新调整tdma和CSMA的长度------------------
-         len_RAP = TB - len_MAP;
-         
          %--------------MAP 阶段，使用TDMA方式分配时隙--------------;               
          start = (j-1)*TB + 1; 
          TDMA_sift = 0;   %偏移量  
          indMAP = find(ones(1,N)==1); %所有节点都参与MAP,所有节点的index
-%          indPoll = getPollNode(indMAP,M);  %确定将被poll的节点
+         indPoll = getPollNode(indMAP,M);  %确定将被poll的节点
          %hist_MAP(j,1:length(indPoll))=indPoll;
-         for ind_node_poll = 1:N   %遍历所有高优先级节点的决策行为     
-%             ind_node_poll = indPoll(poll); %取下标
+         for poll =1:length(indPoll)   %遍历所有高优先级节点的决策行为     
+             ind_node_poll = indPoll(poll); %取下标
             %----------scheduled slots---------------
             CHNafter_leng = 0;
             CHNbefore_leng = start + TDMA_sift - last_TX_time(ind_node_poll);
             %some errors
             %last_TX_time_MAP = last_TX_time(ind_node_poll) - CHNbefore_leng - TDMA_sift;
-            [PL_td,PS_td,lastout(ind_node_poll),TDMA_CHN_Sta(ind_node_poll),Succ_TX_time_td,ELE_MAP,E_buff(ind_node_poll),B_buff(ind_node_poll),stateLast(ind_node_poll),isGood(ind_node_poll),TDMA_con_pktloss(ind_node_poll)] = pktsendTDMA_unsat( CHNbefore_leng,CHNafter_leng,TDMA_CHN_Sta((ind_node_poll)),slotNO(ind_node_poll),Pbg((ind_node_poll)),Pgb((ind_node_poll)),stateLast(ind_node_poll),isGood(ind_node_poll),badStateLast(ind_node_poll),goodStateLast(ind_node_poll),E_buff(ind_node_poll),B_buff(ind_node_poll));
+            [PL_td,PS_td,lastout(ind_node_poll),TDMA_CHN_Sta(ind_node_poll),Succ_TX_time_td,ELE_MAP,E_buff(ind_node_poll),B_buff(ind_node_poll),stateLast(ind_node_poll),isGood(ind_node_poll)] = pktsendTDMA_unsat( CHNbefore_leng,CHNafter_leng,TDMA_CHN_Sta((ind_node_poll)),T_block,Pbg((ind_node_poll)),Pgb((ind_node_poll)),stateLast(ind_node_poll),isGood(ind_node_poll),badStateLast(ind_node_poll),goodStateLast(ind_node_poll),E_buff((ind_node_poll)),B_buff((ind_node_poll)));
             if(~isempty(Succ_TX_time_td))
                 %recover the real index                        
-                ind_TX_MAP = Succ_TX_time_td + start + slotNO(ind_node_poll);
+                ind_TX_MAP = Succ_TX_time_td + start + TDMA_sift;
                 last_TX_time(ind_node_poll) = ind_TX_MAP(end);
                 Succ_TX_time(ind_TX_MAP,ind_node_poll) = 1;
-                last_B_buff(ind_node_poll) = B_buff(ind_node_poll);
-                last_E_buff(ind_node_poll) = E_buff(ind_node_poll);
             end
            %---------------------更新统计变量------------------------
-            TDMA_sift = TDMA_sift + slotNO(ind_node_poll); %根据每个节点分配到的时隙数增加偏移量                    
+            TDMA_sift = TDMA_sift + T_block; %根据每个节点分配到的时隙数增加偏移量                    
             ELE_MAP_sp(j,ind_node_poll) = ELE_MAP_sp(j,ind_node_poll) + ELE_MAP;  %消耗的能量增加 
             PL_MAP_sp(j,ind_node_poll) = PL_td;
             PS_MAP_sp(j,ind_node_poll) = PS_td;                                              
          end 
          
-        %--------------------RAP阶段使用时隙CSMA/CA时隙分配方式,tdma阶段未满足需求的节点参与这个阶段------
+        %--------------------RAP阶段使用时隙CSMA/CA时隙分配方式,所有节点参与这个阶段------
         last_TX_time_RAP = last_TX_time - (j-1)*TB - len_MAP;
 %         tic
         %yf Act(action),ignore the act ,always RAP %TDMA_CHN_Sta,
-        [ReTX_time_pre,Def_Time_Pre,CSMA_Sta_Pre,PL_RAP,PS_RAP,Colli_RAP,ELE_RAP,Succ_TX_time_RAP,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(len_RAP,CSMA_Sta_Pre,Def_Time_Pre,RAP_CHN_Sta,ReTX_time_pre,CW,last_TX_time_RAP,E_buff,B_buff,badStateLast,goodStateLast,isSatisfy);%ELE_RAP,（倒数第四）,E_buff,E_flow（最后两个）等一下改 CW可以全局传过去
+        [ReTX_time_pre,Def_Time_Pre,CSMA_Sta_Pre,PL_RAP,PS_RAP,Colli_RAP,ELE_RAP,Succ_TX_time_RAP,E_buff,B_buff,Count,ELE_tx] = slotCSMACA_unsat_new00(len_RAP,CSMA_Sta_Pre,Def_Time_Pre,RAP_CHN_Sta,ReTX_time_pre,CW,last_TX_time_RAP,E_buff,B_buff);%ELE_RAP,（倒数第四）,E_buff,E_flow（最后两个）等一下改 CW可以全局传过去
 %         toc
         
         PL_RAP_sp(j,:) = PL_RAP;
@@ -246,20 +195,14 @@ for indE = 1:10    %多种能量到达速率情况下
         ELE_RAP_sp(j,:) = ELE_RAP;
         ELE_RAP_tx(j,:) = ELE_tx;
         Count_sp(j,:) = Count;
-        
-        %--------------更新CSMA阶段的冲突次数----------------------------------
-        totalCollision = sum(Colli_RAP);
-        
         for n=1:N
             %更新最近一次成功发包的时间
             if( ~isempty(Succ_TX_time_RAP{n}) )
                 %更新成功发包时间记录
                 ind_TX_RAP = Succ_TX_time_RAP{n} + (j-1)*TB;  %recover the real index
-                last_TX_time(n) = ind_TX_RAP(end);
+                last_TX_time(n) =  ind_TX_RAP(end);
                 Succ_TX_time(ind_TX_RAP,n) = 1;
                 last_TX_time_RAP(n) = last_TX_time(n)-(j-1)*TB;
-                last_B_buff(n) = B_buff(n);
-                last_E_buff(n) = E_buff(n);
             end  
         end
         
@@ -275,9 +218,6 @@ for indE = 1:10    %多种能量到达速率情况下
         EH_sp(j,:) = E_flow;  %yf 一会儿更改，将e_flow和E_buff放到slotCSMACA_unsat_new 长度从Tsim变成了rap_length
         hist_E(j,:) = E_buff;
         hist_B(j,:) = B_buff;
-        
-        %-----------更新不同lambda对应的分配情况---------------
-        slotNO_of_sp(j,:) = slotNO;
         
         %--------------更新数据采样率：根据之前markov链的结果-------------------------
         for n = 1 : N
@@ -302,13 +242,10 @@ for indE = 1:10    %多种能量到达速率情况下
             %动作发生改变需不需要重置stateLast
             stateLast = zeros(1,N);   %设置每个节点的信道持续时间
         end
-        
         %--------------进度显示-------------------------------
-         str = ['仿真完成', num2str(j*100/Tsim), '%'];   
+         str = ['仿真完成', num2str(j*100/Tsim), '%'];     
          waitbar(j/Tsim,Swait,str);
     end
-        save(strcat([num2str(lambda), '.mat']), 'slotNO_of_sp');
-    end %end lambda
     close(Swait);
 
         %--------------yf求信道利用率-------------------------------
@@ -333,7 +270,7 @@ for indE = 1:10    %多种能量到达速率情况下
         Count_total(up,indE) = mean( sum( Count_sp(:,indUP) ) ); 
         
         Colli_t(up,indE) = mean( sum( Colli_RAP_sp(:,indUP) ) );  %总冲突数，取所有节点的平均数                
-        Interval_avg(up,indE) = mean( Intv(indUP) );  %平均成功发包间隔 ,取各节点的平均数
+        Interval_avg(up,indE) = mean( Intv(indUP) );  %平均成功发包间隔 ,去各节点的平均数
         Ulit_rate(up,indE) = mean( Slot_ulti(indUP) ); %平均信道利用率
 %         Pktloss = PL_t./(PL_t+PS_t);
         Pktloss_rate(up,indE) = mean( sum( PL_RAP_sp(:,indUP) )./sum( PS_RAP_sp(:,indUP) ) ) ;   %将属于同一优先级的节点的平均丢包率保存起来        
@@ -344,16 +281,16 @@ for indE = 1:10    %多种能量到达速率情况下
 %         Act_time(indE) = mean(actTime_sp);
         EH_WBAN(indE) = sum( sum(EH_sp) )/N;
         %yf
-        ELE_of_WBAN(indE) = sum( sum(ELE_RAP_sp+ELE_RAP_sp) )/N;
+        ELE_of_WBAN(indE) = sum( sum(ELE_RAP_sp) )/N;
         Interval_WBAN(indE) = mean(Intv);
         %yf
-        ELE_WBAN(indE) = sum( sum(ELE_RAP_sp+ELE_MAP_sp) )/N;
+        ELE_WBAN(indE) = sum( sum(ELE_RAP_sp) )/N;
         %yf
-        PS_WBAN(indE) = sum( sum(PS_RAP_sp+PS_MAP_sp) )/N;       
+        PS_WBAN(indE) = sum( sum(PS_RAP_sp) )/N;       
         Colli_WBAN(indE) = sum( sum(Colli_RAP_sp) )/N;
-        Pktloss_WBAN(indE) = sum(sum( PL_RAP_sp+PL_MAP_sp ))/sum(sum( PS_RAP_sp+PS_MAP_sp ));
+        Pktloss_WBAN(indE) = sum(sum( PL_RAP_sp ))/sum(sum( PS_RAP_sp ));
         
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
 disp('unsaturation VarE and FixLen simulation done!')
-save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)(delta8)(a3)(b0.5)(M0)(EH2)varyResetChannel.mat');
+save('VarN_MAC(UP0-2-4-6,N8)(E_th50)(E_cca5)VarE.mat');

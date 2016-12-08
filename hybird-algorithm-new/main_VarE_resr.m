@@ -122,7 +122,7 @@ for indE = 1:10    %多种能量到达速率情况下
     last_B_buff = zeros(1,N);
     last_E_buff = zeros(1,N);
     
-    %---------------需要统计的结果-------------------------------
+    %--------------一需要统计的结果-------------------------------
     PL_RAP_sp = zeros(Tsim,N);  %丢包数
     PL_MAP_sp = zeros(Tsim,N);
     Colli_RAP_sp = zeros(Tsim,N);
@@ -189,7 +189,7 @@ for indE = 1:10    %多种能量到达速率情况下
          %--------------获得不同节点上一个超帧的状态（连续丢包数目，冲突次数，数据、能量水平估计），调整CSMA阶段的长度-------------
          B_buff_esti = min(floor(last_B_buff + ((j - 1)*TB + 1 - last_TX_time).*lambdaB), Bmax); %需要一个last_B_buff和一个last_E_buff代表上次传输成功的两个buff的水平
          E_buff_esti = min(floor(last_E_buff + ((j - 1)*TB + 1 - last_TX_time).*lambdaE), Emax);
-         [~, len_MAP, aCLI] = CSMALength_update(TDMA_con_pktloss, totalCollision, E_buff_esti, len_RAP, aCLI);
+%          [~, len_MAP, aCLI] = CSMALength_update(TDMA_con_pktloss, totalCollision, E_buff_esti, len_RAP, aCLI);
          
          %--------------tdma阶段长度确定以后，进行tdma阶段的资源分配：slotNO，要根据节点需求重新调整MAP的长度-----------------------
          %调整不同节点的现有的
@@ -356,4 +356,4 @@ for indE = 1:10    %多种能量到达速率情况下
       disp(['indE NumUP: ',num2str([indE N])]) 
 end
 disp('unsaturation VarE and FixLen simulation done!')
-save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)(delta8)(a3)(b0.5)(M0)(EH2)varyResetChannel.mat');
+save('VarE_MAC(UP0-2-4-6,N16)(E_th10)(E_cca1)(lambda1.6)(M0)(EH2)resrc.mat');
